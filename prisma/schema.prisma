@@ -1,0 +1,107 @@
+generator client {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users & Auth
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  name          String?
+  apiKey        String        @unique @default(cuid())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  rateLimitTier RateLimitTier @default(FREE)
+
+  sessions  Session[]
+  usageLogs UsageLog[]
+}
+
+enum RateLimitTier {
+  FREE
+  PRO
+  UNLIMITED
+}
+
+// Research Sessions
+model Session {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  status    SessionStatus @default(ACTIVE)
+  state     Json?
+  messages  Json          @default("[]")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  reports   Report[]
+  artifacts Artifact[]
+
+  @@index([userId, status])
+}
+
+enum SessionStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  FAILED
+}
+
+// Research Outputs
+model Report {
+  id        String   @id @default(cuid())
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  title     String
+  markdown  String
+  jsonData  Json
+  sources   Json
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+}
+
+model Artifact {
+  id        String       @id @default(cuid())
+  sessionId String
+  session   Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type      ArtifactType
+  filename  String
+  mimeType  String
+  url       String?
+  content   Bytes?
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  @@index([sessionId, type])
+}
+
+enum ArtifactType {
+  CSV
+  CHART
+  CODE
+  PDF
+  IMAGE
+  OTHER
+}
+
+// Usage & Rate Limiting
+model UsageLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  tokens    Int?
+  cost      Float?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, action, createdAt])
+}
