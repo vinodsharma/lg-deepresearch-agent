@@ -1,8 +1,9 @@
 """Sandboxed code execution using E2B."""
 
 import os
-from langchain_core.tools import tool
+
 from e2b_code_interpreter import Sandbox
+from langchain_core.tools import tool
 
 
 @tool

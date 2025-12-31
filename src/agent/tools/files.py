@@ -2,8 +2,8 @@
 
 import fitz  # PyMuPDF
 from docx import Document
-from openpyxl import load_workbook
 from langchain_core.tools import tool
+from openpyxl import load_workbook
 
 
 @tool
@@ -30,6 +30,7 @@ def analyze_pdf(file_path: str, max_pages: int = 50) -> str:
             if text.strip():
                 text_parts.append(f"--- Page {i + 1} ---\n{text}")
 
+        doc_length = len(doc)
         doc.close()
 
         if not text_parts:
@@ -37,8 +38,8 @@ def analyze_pdf(file_path: str, max_pages: int = 50) -> str:
 
         result = "\n\n".join(text_parts)
 
-        if len(doc) > max_pages:
-            result += f"\n\n[Truncated: showing {max_pages} of {len(doc)} pages]"
+        if doc_length > max_pages:
+            result += f"\n\n[Truncated: showing {max_pages} of {doc_length} pages]"
 
         return result
 
