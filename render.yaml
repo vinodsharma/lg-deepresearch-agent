@@ -1,0 +1,41 @@
+# render.yaml
+services:
+  - type: web
+    name: deep-research-agent
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerTarget: production
+    plan: starter
+
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: deep-research-db
+          property: connectionString
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: E2B_API_KEY
+        sync: false
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://your-frontend-domain.com
+
+    healthCheckPath: /health
+
+    buildCommand: |
+      uv run prisma generate &&
+      uv run prisma migrate deploy
+
+databases:
+  - name: deep-research-db
+    plan: starter
+    databaseName: deepresearch
+    user: deepresearch
