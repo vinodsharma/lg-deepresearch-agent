@@ -86,7 +86,8 @@ Create these environments in GitHub Settings → Environments:
 ### 4. Render Setup
 
 1. **Create Services**: Import the `render.yaml` in Render Dashboard
-   - This creates production, staging, and preview services with their databases
+   - Creates production, staging, and preview services
+   - Production and staging have dedicated databases; preview shares staging database (free tier limit)
 2. **Get Deploy Hooks**:
    - Go to each service (production, staging, preview) → Settings → Deploy Hook
    - Copy the URL and add to GitHub Secrets as:
