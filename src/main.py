@@ -11,6 +11,7 @@ from src.config import get_settings
 from src.db.client import connect_db, disconnect_db
 from src.api.routes import router
 from src.api.sessions import router as sessions_router
+from src.api.research import router as research_router
 
 
 @asynccontextmanager
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(router)
     app.include_router(sessions_router)
+    app.include_router(research_router)
 
     return app
 

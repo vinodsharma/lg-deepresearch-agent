@@ -1,6 +1,8 @@
 """LangFuse observability integration."""
 
 import os
+import uuid
+from typing import Any
 from langfuse import Langfuse
 from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
 
@@ -53,3 +55,58 @@ def create_langfuse_callback() -> LangfuseCallbackHandler | None:
 
     # Create callback handler - it uses the global client
     return LangfuseCallbackHandler()
+
+
+def build_langfuse_config(
+    user_id: str,
+    session_id: str,
+    request_id: str | None = None,
+    tags: list[str] | None = None,
+) -> dict[str, Any]:
+    """Build LangGraph config with LangFuse tracing metadata.
+
+    This creates a config dict that can be passed to agent.ainvoke()
+    to enable proper grouping in LangFuse by user, session, and request.
+
+    Args:
+        user_id: User identifier for grouping traces by user.
+        session_id: Session identifier for grouping traces by conversation.
+        request_id: Optional unique request ID (auto-generated if not provided).
+        tags: Optional list of tags for filtering traces.
+
+    Returns:
+        Config dict with callbacks and metadata for LangFuse grouping.
+
+    Example:
+        ```python
+        config = build_langfuse_config(
+            user_id="user_123",
+            session_id="session_456",
+            tags=["research", "web-search"],
+        )
+        result = await agent.ainvoke({"messages": [...]}, config=config)
+        ```
+    """
+    # Create callback handler
+    callback = create_langfuse_callback()
+    callbacks = [callback] if callback else []
+
+    # Generate request ID if not provided
+    if request_id is None:
+        request_id = str(uuid.uuid4())
+
+    # Build metadata for LangFuse
+    metadata: dict[str, Any] = {
+        "langfuse_user_id": user_id,
+        "langfuse_session_id": session_id,
+    }
+
+    if tags:
+        metadata["langfuse_tags"] = tags
+
+    return {
+        "callbacks": callbacks,
+        "metadata": metadata,
+        "run_name": f"research-{request_id[:8]}",
+        "recursion_limit": 30,
+    }

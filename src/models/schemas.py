@@ -44,3 +44,20 @@ class ReportResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ResearchRequest(BaseModel):
+    """Request to run a research query."""
+
+    query: str
+    tags: list[str] | None = None
+
+
+class ResearchResponse(BaseModel):
+    """Research response."""
+
+    request_id: str
+    session_id: str
+    query: str
+    response: str
+    tool_calls: list[dict[str, Any]] = []
