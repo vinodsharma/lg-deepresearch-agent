@@ -10,7 +10,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     branch: main
     autoDeploy: false  # Controlled via GitHub Actions
 
@@ -52,7 +52,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     branch: staging
     autoDeploy: false  # Controlled via GitHub Actions
 
@@ -95,11 +95,11 @@ services:
 # ===================
 databases:
   - name: deep-research-db
-    plan: starter
+    plan: free
     databaseName: deepresearch
     user: deepresearch
 
   - name: deep-research-db-staging
-    plan: starter
+    plan: free
     databaseName: deepresearch_staging
     user: deepresearch
