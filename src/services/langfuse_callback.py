@@ -96,9 +96,12 @@ def build_langfuse_config(
         request_id = str(uuid.uuid4())
 
     # Build metadata for LangFuse
+    # Note: We don't set run_name here as it propagates to all nested calls
+    # causing confusing duplicate names. LangFuse will auto-name traces.
     metadata: dict[str, Any] = {
         "langfuse_user_id": user_id,
         "langfuse_session_id": session_id,
+        "request_id": request_id,  # Store for reference, not used by LangFuse
     }
 
     if tags:
@@ -107,6 +110,5 @@ def build_langfuse_config(
     return {
         "callbacks": callbacks,
         "metadata": metadata,
-        "run_name": f"research-{request_id[:8]}",
         "recursion_limit": 30,
     }
