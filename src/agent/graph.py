@@ -31,13 +31,15 @@ class HITLMode(str, Enum):
 
 def get_model(
     callbacks: list[BaseCallbackHandler] | None = None,
-    reasoning: bool = True,
+    reasoning: bool = False,
 ) -> ChatOpenAI:
     """Initialize MiMo V2 Flash via OpenRouter.
 
     Args:
         callbacks: Optional list of callback handlers (e.g., LangFuse).
-        reasoning: Enable extended reasoning/thinking mode (default: True).
+        reasoning: Enable extended reasoning/thinking mode (default: False).
+            Note: MiMo V2 Flash reasoning mode is optimized for direct Q&A.
+            For agentic tool use, keep disabled for best performance.
     """
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
