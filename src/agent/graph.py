@@ -29,8 +29,12 @@ class HITLMode(str, Enum):
     FULL = "full"
 
 
-def get_model() -> ChatOpenAI:
-    """Initialize MiMo V2 Flash via OpenRouter."""
+def get_model(callbacks: list[BaseCallbackHandler] | None = None) -> ChatOpenAI:
+    """Initialize MiMo V2 Flash via OpenRouter.
+
+    Args:
+        callbacks: Optional list of callback handlers (e.g., LangFuse).
+    """
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY environment variable not set")
@@ -41,9 +45,7 @@ def get_model() -> ChatOpenAI:
         api_key=api_key,
         temperature=0.0,
         max_tokens=65536,
-        model_kwargs={
-            "extra_body": {"reasoning": {"enabled": True}}
-        },
+        callbacks=callbacks or [],
     )
 
 
@@ -60,7 +62,7 @@ def create_research_agent(
     Returns:
         Compiled LangGraph agent.
     """
-    model = get_model()
+    model = get_model(callbacks=callbacks)
 
     # All tools available to orchestrator
     all_tools = [
@@ -88,7 +90,6 @@ def create_research_agent(
         tools=all_tools,
         subagents=[researcher],
         interrupt_on=interrupt_config,
-        callbacks=callbacks or [],
     )
 
     return graph
