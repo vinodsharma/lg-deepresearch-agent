@@ -10,7 +10,6 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerTarget: production
     plan: starter
     branch: main
     autoDeploy: false  # Controlled via GitHub Actions
@@ -53,7 +52,6 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerTarget: production
     plan: starter
     branch: staging
     autoDeploy: false  # Controlled via GitHub Actions
