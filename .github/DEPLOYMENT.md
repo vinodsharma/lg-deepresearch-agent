@@ -8,19 +8,24 @@ This project uses GitHub Actions for CI/CD with Render as the hosting platform.
 |-------------|--------|-----|---------|
 | Production | `main` | `https://deep-research-agent.onrender.com` | Live production environment |
 | Staging | `staging` | `https://deep-research-agent-staging.onrender.com` | Pre-production testing |
-| Preview | `feature/*`, `fix/*`, `chore/*` | Auto-generated | PR preview environments |
+| Preview | `feature/*`, `fix/*`, `chore/*`, etc. | `https://deep-research-agent-preview.onrender.com` | Feature branch testing |
 
 ## Workflow Overview
 
 ```
-feature/* ─┬─► PR ──► Preview Environment
-fix/*      │         (auto-created by Render)
-chore/*   ─┘
+feature/* ─┬─► Push ──► Preview Environment (fixed)
+fix/*      │            https://deep-research-agent-preview.onrender.com
+chore/*    │
+hotfix/*   │
+bugfix/*   │
+refactor/* │
+test/*     │
+docs/*    ─┘
               │
-              ▼
+              ▼ (merge)
            staging ──► Staging Environment
               │
-              ▼
+              ▼ (merge)
             main ──► Production Environment
 ```
 
@@ -42,9 +47,9 @@ chore/*   ─┘
 - **Concurrency**: Cancels in-progress staging deploys
 
 ### 4. Preview Deploy (`deploy-preview.yml`)
-- **Triggers**: PRs to `main` or `staging`
-- **Jobs**: Test → Build → Preview Deploy
-- **Concurrency**: Cancels in-progress preview deploys per branch
+- **Triggers**: Push to `feature/**`, `fix/**`, `chore/**`, `hotfix/**`, `bugfix/**`, `refactor/**`, `test/**`, `docs/**`
+- **Jobs**: Test → Build → Deploy to fixed preview environment
+- **Concurrency**: Cancels in-progress preview deploys (all branches share one preview environment)
 
 ## Setup Instructions
 
@@ -55,6 +60,7 @@ Add these secrets in GitHub Settings → Secrets and Variables → Actions:
 ```
 RENDER_DEPLOY_HOOK_PRODUCTION  # Render deploy hook URL for production
 RENDER_DEPLOY_HOOK_STAGING     # Render deploy hook URL for staging
+RENDER_DEPLOY_HOOK_PREVIEW     # Render deploy hook URL for preview
 RENDER_API_KEY                 # (Optional) Render API key for advanced features
 RENDER_SERVICE_ID              # (Optional) Render service ID
 ```
@@ -66,6 +72,7 @@ Add these variables in GitHub Settings → Secrets and Variables → Actions:
 ```
 PRODUCTION_URL    # e.g., https://deep-research-agent.onrender.com
 STAGING_URL       # e.g., https://deep-research-agent-staging.onrender.com
+PREVIEW_URL       # e.g., https://deep-research-agent-preview.onrender.com
 ```
 
 ### 3. GitHub Environments
@@ -79,11 +86,13 @@ Create these environments in GitHub Settings → Environments:
 ### 4. Render Setup
 
 1. **Create Services**: Import the `render.yaml` in Render Dashboard
+   - This creates production, staging, and preview services with their databases
 2. **Get Deploy Hooks**:
-   - Go to each service → Settings → Deploy Hook
-   - Copy the URL and add to GitHub Secrets
-3. **Enable PR Previews**:
-   - Go to staging service → Settings → PR Previews → Enable
+   - Go to each service (production, staging, preview) → Settings → Deploy Hook
+   - Copy the URL and add to GitHub Secrets as:
+     - `RENDER_DEPLOY_HOOK_PRODUCTION`
+     - `RENDER_DEPLOY_HOOK_STAGING`
+     - `RENDER_DEPLOY_HOOK_PREVIEW`
 
 ### 5. Create Staging Branch
 
@@ -102,9 +111,10 @@ git checkout -b feature/my-feature
 
 # Make changes and push
 git push -u origin feature/my-feature
+# → Automatically deploys to preview environment
 
-# Open PR → Preview environment created automatically
-# After review → Merge to staging
+# After testing in preview, create PR and merge to staging
+# → Staging deployment triggered
 ```
 
 ### Staging to Production
