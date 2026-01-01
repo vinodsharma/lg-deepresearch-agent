@@ -86,9 +86,47 @@ services:
       uv run prisma generate &&
       uv run prisma migrate deploy
 
-    # Enable PR Previews for staging service
-    previews:
-      generation: automatic
+  # ===================
+  # Preview Service
+  # ===================
+  - type: web
+    name: deep-research-agent-preview
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    branch: main  # Default branch, actual deployment controlled via GitHub Actions
+    autoDeploy: false  # Controlled via GitHub Actions for feature/fix/chore branches
+
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: deep-research-db-preview
+          property: connectionString
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: E2B_API_KEY
+        sync: false
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+      - key: LANGFUSE_HOST
+        value: https://us.cloud.langfuse.com
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: ENVIRONMENT
+        value: preview
+
+    healthCheckPath: /health
+
+    buildCommand: |
+      uv run prisma generate &&
+      uv run prisma migrate deploy
 
 # ===================
 # Databases
@@ -102,4 +140,9 @@ databases:
   - name: deep-research-db-staging
     plan: free
     databaseName: deepresearch_staging
+    user: deepresearch
+
+  - name: deep-research-db-preview
+    plan: free
+    databaseName: deepresearch_preview
     user: deepresearch

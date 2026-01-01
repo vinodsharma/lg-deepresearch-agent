@@ -2,12 +2,19 @@
 name: Deploy Preview
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: [main, staging]
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'chore/**'
+      - 'hotfix/**'
+      - 'bugfix/**'
+      - 'refactor/**'
+      - 'test/**'
+      - 'docs/**'
 
 concurrency:
-  group: preview-${{ github.head_ref }}
+  group: preview
   cancel-in-progress: true
 
 env:
@@ -70,22 +77,11 @@ jobs:
     name: Build Docker Image
     runs-on: ubuntu-latest
     needs: test
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: deep-research-agent
-          tags: |
-            type=ref,event=pr
-            type=sha,prefix=pr-${{ github.event.pull_request.number }}-
 
       - name: Build Docker image
         uses: docker/build-push-action@v5
@@ -95,97 +91,45 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: deep-research-agent:preview-${{ github.sha }}
 
-  preview:
-    name: Deploy Preview
+  deploy:
+    name: Deploy to Preview
     runs-on: ubuntu-latest
     needs: build
-    if: github.event.pull_request.head.repo.full_name == github.repository
     environment:
       name: preview
-      url: ${{ steps.deploy.outputs.preview_url }}
+      url: ${{ vars.PREVIEW_URL }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Get branch name
-        id: branch
+      - name: Deploy to Render Preview
         run: |
-          BRANCH_NAME="${{ github.head_ref }}"
-          # Sanitize branch name for use in subdomain
-          SAFE_NAME=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | cut -c1-20)
-          echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
-          echo "Branch: $BRANCH_NAME -> $SAFE_NAME"
+          echo "Deploying branch ${{ github.ref_name }} to preview environment..."
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_PREVIEW }}"
 
-      - name: Deploy Preview to Render
-        id: deploy
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Health check
         run: |
-          # Trigger Render preview deployment via API
-          # Render automatically creates preview environments for PRs
-          # when "Pull Request Previews" is enabled in the service settings
+          for i in {1..10}; do
+            if curl -sf "${{ vars.PREVIEW_URL }}/health"; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 30s..."
+            sleep 30
+          done
+          echo "Health check failed after 10 attempts"
+          exit 1
+        continue-on-error: true
 
-          PREVIEW_URL="https://${{ steps.branch.outputs.safe_name }}-deep-research-agent.onrender.com"
-          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
-          echo "Preview URL: $PREVIEW_URL"
-
-          # If using Render API for custom preview deployment:
-          # curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
-          #   -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-          #   -H "Content-Type: application/json" \
-          #   -d '{"clearCache": "do_not_clear"}'
-
-      - name: Comment PR with preview URL
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
-            const body = `## 🚀 Preview Deployment
-
-            | Environment | URL |
-            |-------------|-----|
-            | Preview | [${previewUrl}](${previewUrl}) |
-
-            **Branch:** \`${{ github.head_ref }}\`
-            **Commit:** \`${{ github.sha }}\`
-
-            > Note: Preview environments are automatically created by Render for Pull Requests.
-            > The URL will be available once Render completes the deployment.
-            `;
-
-            // Find existing comment
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const botComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('Preview Deployment')
-            );
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: body
-              });
-            }
-
-  cleanup:
-    name: Cleanup Preview
-    runs-on: ubuntu-latest
-    if: github.event.action == 'closed'
-    steps:
-      - name: Cleanup notice
+      - name: Deployment summary
         run: |
-          echo "PR closed - Render will automatically clean up preview environments"
-          # Render automatically deletes preview environments when PRs are closed
+          echo "## 🚀 Preview Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | Preview |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | ${{ vars.PREVIEW_URL }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
