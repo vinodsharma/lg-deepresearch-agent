@@ -16,9 +16,7 @@ async def fetch_url(url: str, max_length: int = 50000) -> str:
     Returns:
         The page content converted to markdown format.
     """
-    headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; DeepResearchAgent/1.0)"
-    }
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; DeepResearchAgent/1.0)"}
 
     try:
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:

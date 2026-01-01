@@ -1,5 +1,5 @@
 """Database module."""
 
-from .client import prisma, connect_db, disconnect_db
+from .client import connect_db, disconnect_db, prisma
 
 __all__ = ["prisma", "connect_db", "disconnect_db"]

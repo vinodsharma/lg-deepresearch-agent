@@ -4,14 +4,14 @@
 from fastapi import APIRouter, HTTPException, status
 
 from src.db.client import prisma
-from src.db.repositories import SessionRepository, ReportRepository
-from src.services import CurrentUser, RateLimitedUser, log_usage
+from src.db.repositories import ReportRepository, SessionRepository
 from src.models.schemas import (
-    SessionCreate,
-    SessionResponse,
-    SessionListResponse,
     ReportResponse,
+    SessionCreate,
+    SessionListResponse,
+    SessionResponse,
 )
+from src.services import CurrentUser, RateLimitedUser, log_usage
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 

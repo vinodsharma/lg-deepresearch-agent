@@ -4,20 +4,21 @@
 import os
 from enum import Enum
 from typing import Any
-from langchain_openai import ChatOpenAI
-from langchain_core.callbacks import BaseCallbackHandler
+
 from deepagents import create_deep_agent
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_openai import ChatOpenAI
 
 from .prompts import ORCHESTRATOR_PROMPT
+from .subagents import get_researcher_config
 from .tools import (
-    tavily_search,
-    fetch_url,
-    analyze_pdf,
     analyze_document,
+    analyze_pdf,
     e2b_execute,
+    fetch_url,
+    tavily_search,
     think_tool,
 )
-from .subagents import get_researcher_config
 
 
 class HITLMode(str, Enum):
@@ -119,10 +120,7 @@ def _build_interrupt_config(
         return {"*": {"allowed_decisions": ["approve", "reject", "modify"]}}
 
     if mode == HITLMode.SENSITIVE:
-        return {
-            tool.name: {"allowed_decisions": ["approve", "reject"]}
-            for tool in sensitive_tools
-        }
+        return {tool.name: {"allowed_decisions": ["approve", "reject"]} for tool in sensitive_tools}
 
     if mode == HITLMode.CHECKPOINTS:
         return {

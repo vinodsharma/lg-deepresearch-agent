@@ -3,13 +3,13 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status, Header
+from fastapi import Depends, Header, HTTPException, status
 from jose import JWTError, jwt
+from prisma.models import User
 from pydantic import BaseModel
 
 from src.config import get_settings
 from src.db.client import prisma
-from prisma.models import User
 
 
 class TokenData(BaseModel):
@@ -60,9 +60,7 @@ def decode_access_token(token: str) -> TokenData | None:
     settings = get_settings()
 
     try:
-        payload = jwt.decode(
-            token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
-        )
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         return TokenData(user_id=payload["user_id"], exp=payload["exp"])
     except JWTError:
         return None

@@ -1,8 +1,7 @@
 """Tests for code execution tool."""
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 import os
+from unittest.mock import MagicMock, patch
 
 
 def test_e2b_execute_returns_output():
