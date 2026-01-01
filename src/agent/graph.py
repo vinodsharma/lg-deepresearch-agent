@@ -29,15 +29,24 @@ class HITLMode(str, Enum):
     FULL = "full"
 
 
-def get_model(callbacks: list[BaseCallbackHandler] | None = None) -> ChatOpenAI:
+def get_model(
+    callbacks: list[BaseCallbackHandler] | None = None,
+    reasoning: bool = True,
+) -> ChatOpenAI:
     """Initialize MiMo V2 Flash via OpenRouter.
 
     Args:
         callbacks: Optional list of callback handlers (e.g., LangFuse).
+        reasoning: Enable extended reasoning/thinking mode (default: True).
     """
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY environment variable not set")
+
+    # Build extra body parameters for OpenRouter
+    extra_body = {}
+    if reasoning:
+        extra_body["reasoning"] = {"enabled": True}
 
     return ChatOpenAI(
         model="xiaomi/mimo-v2-flash:free",
@@ -46,6 +55,7 @@ def get_model(callbacks: list[BaseCallbackHandler] | None = None) -> ChatOpenAI:
         temperature=0.0,
         max_tokens=65536,
         callbacks=callbacks or [],
+        extra_body=extra_body if extra_body else None,
     )
 
 
