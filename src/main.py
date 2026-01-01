@@ -31,7 +31,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Deep Research Agent",
         description="Deep research agent using LangGraph deepagents framework",
-        version="0.1.0",
+        version="0.1.1-preview",
         lifespan=lifespan,
     )
 
