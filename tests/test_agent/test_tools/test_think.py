@@ -1,6 +1,5 @@
 """Tests for think tool."""
 
-import pytest
 from src.agent.tools.think import think_tool
 
 

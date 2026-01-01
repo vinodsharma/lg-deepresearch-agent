@@ -1,8 +1,7 @@
 """Tests for search tools."""
 
-import pytest
-from unittest.mock import patch, MagicMock
 import os
+from unittest.mock import MagicMock, patch
 
 
 def test_tavily_search_returns_results():

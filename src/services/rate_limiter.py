@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
-from prisma.models import User
 from prisma.enums import RateLimitTier
+from prisma.models import User
 
 from src.config import get_settings
 from src.db.client import prisma

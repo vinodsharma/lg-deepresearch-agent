@@ -3,6 +3,7 @@
 import os
 import uuid
 from typing import Any
+
 from langfuse import Langfuse
 from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
 

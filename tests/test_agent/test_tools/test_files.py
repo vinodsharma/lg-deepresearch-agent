@@ -1,8 +1,6 @@
 """Tests for file analysis tools."""
 
-import pytest
-from unittest.mock import patch, MagicMock
-import io
+from unittest.mock import MagicMock, patch
 
 
 def test_analyze_pdf_extracts_text():
