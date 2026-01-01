@@ -3,9 +3,11 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches-ignore:
+      - main
+      - staging
   pull_request:
-    branches: [main]
+    branches: [main, staging]
 
 env:
   PYTHON_VERSION: "3.11"

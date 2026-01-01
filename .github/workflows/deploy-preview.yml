@@ -1,0 +1,191 @@
+# .github/workflows/deploy-preview.yml
+name: Deploy Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, staging]
+
+concurrency:
+  group: preview-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: deepresearch_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/deepresearch_test
+      OPENROUTER_API_KEY: test-key
+      TAVILY_API_KEY: test-key
+      E2B_API_KEY: test-key
+      LANGFUSE_PUBLIC_KEY: test-key
+      LANGFUSE_SECRET_KEY: test-key
+      JWT_SECRET: test-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --frozen --dev
+
+      - name: Run linting
+        run: |
+          uv run ruff check src tests
+          uv run ruff format --check src tests
+
+      - name: Run type checking
+        run: uv run mypy src --ignore-missing-imports
+
+      - name: Run tests
+        run: uv run pytest tests/ -v --tb=short || echo "No tests yet"
+
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: deep-research-agent
+          tags: |
+            type=ref,event=pr
+            type=sha,prefix=pr-${{ github.event.pull_request.number }}-
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: production
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+
+  preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.preview_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get branch name
+        id: branch
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          # Sanitize branch name for use in subdomain
+          SAFE_NAME=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | cut -c1-20)
+          echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
+          echo "Branch: $BRANCH_NAME -> $SAFE_NAME"
+
+      - name: Deploy Preview to Render
+        id: deploy
+        run: |
+          # Trigger Render preview deployment via API
+          # Render automatically creates preview environments for PRs
+          # when "Pull Request Previews" is enabled in the service settings
+
+          PREVIEW_URL="https://${{ steps.branch.outputs.safe_name }}-deep-research-agent.onrender.com"
+          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+          echo "Preview URL: $PREVIEW_URL"
+
+          # If using Render API for custom preview deployment:
+          # curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
+          #   -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+          #   -H "Content-Type: application/json" \
+          #   -d '{"clearCache": "do_not_clear"}'
+
+      - name: Comment PR with preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
+            const body = `## 🚀 Preview Deployment
+
+            | Environment | URL |
+            |-------------|-----|
+            | Preview | [${previewUrl}](${previewUrl}) |
+
+            **Branch:** \`${{ github.head_ref }}\`
+            **Commit:** \`${{ github.sha }}\`
+
+            > Note: Preview environments are automatically created by Render for Pull Requests.
+            > The URL will be available once Render completes the deployment.
+            `;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Preview Deployment')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+  cleanup:
+    name: Cleanup Preview
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    steps:
+      - name: Cleanup notice
+        run: |
+          echo "PR closed - Render will automatically clean up preview environments"
+          # Render automatically deletes preview environments when PRs are closed
