@@ -53,11 +53,17 @@ COPY --chown=appuser:appgroup . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
+# Set Prisma binary cache directory to a location accessible by appuser
+ENV PRISMA_BINARY_CACHE_DIR=/app/.prisma
+
+# Create Prisma cache directory
+RUN mkdir -p /app/.prisma
+
 # Generate Prisma client during build
 RUN uv run prisma generate
 
-# Fix ownership of .venv for appuser
-RUN chown -R appuser:appgroup /app/.venv
+# Fix ownership of .venv and .prisma for appuser
+RUN chown -R appuser:appgroup /app/.venv /app/.prisma
 
 USER appuser
 
