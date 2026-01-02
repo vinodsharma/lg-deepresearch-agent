@@ -48,6 +48,12 @@ COPY --chown=appuser:appgroup . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
+# Generate Prisma client during build
+RUN uv run prisma generate
+
+# Fix ownership of .venv for appuser
+RUN chown -R appuser:appgroup /app/.venv
+
 USER appuser
 
 EXPOSE 8000
