@@ -65,6 +65,9 @@ RUN uv run prisma generate
 # Fix ownership of .venv and .prisma for appuser
 RUN chown -R appuser:appgroup /app/.venv /app/.prisma
 
+# Make entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
+
 USER appuser
 
 EXPOSE 8000
@@ -72,4 +75,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:8000/health')" || exit 1
 
-CMD ["uv", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use entrypoint script to run migrations before starting app
+CMD ["/app/docker-entrypoint.sh"]
