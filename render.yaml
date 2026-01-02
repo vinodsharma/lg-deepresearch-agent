@@ -34,7 +34,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: https://your-frontend-domain.com
+        value: '["https://your-frontend-domain.com"]'
       - key: ENVIRONMENT
         value: production
 
@@ -74,7 +74,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: https://your-staging-frontend.com
+        value: '["https://your-staging-frontend.com"]'
       - key: ENVIRONMENT
         value: staging
 
@@ -114,7 +114,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: "*"
+        value: '["*"]'
       - key: ENVIRONMENT
         value: preview
 
