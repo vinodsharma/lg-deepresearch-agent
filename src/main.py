@@ -7,11 +7,11 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.config import get_settings
-from src.db.client import connect_db, disconnect_db
+from src.api.research import router as research_router
 from src.api.routes import router
 from src.api.sessions import router as sessions_router
-from src.api.research import router as research_router
+from src.config import get_settings
+from src.db.client import connect_db, disconnect_db
 
 
 @asynccontextmanager
@@ -31,7 +31,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Deep Research Agent",
         description="Deep research agent using LangGraph deepagents framework",
-        version="0.1.0",
+        version="0.1.1-preview",
         lifespan=lifespan,
     )
 

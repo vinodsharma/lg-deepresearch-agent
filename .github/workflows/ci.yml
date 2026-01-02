@@ -27,7 +27,7 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync --frozen --dev
+        run: uv sync --frozen --extra dev
 
       - name: Run ruff check
         run: uv run ruff check src tests
@@ -49,7 +49,7 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync --frozen --dev
+        run: uv sync --frozen --extra dev
 
       - name: Run mypy
         run: uv run mypy src --ignore-missing-imports
@@ -92,7 +92,7 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync --frozen --dev
+        run: uv sync --frozen --extra dev
 
       - name: Run tests
         run: uv run pytest tests/ -v --tb=short || echo "No tests yet, skipping"

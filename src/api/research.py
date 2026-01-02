@@ -2,14 +2,15 @@
 """Research API routes."""
 
 import uuid
+
 from fastapi import APIRouter, HTTPException, status
 from prisma.enums import SessionStatus
 
+from src.agent.graph import HITLMode, create_research_agent
 from src.db.client import prisma
 from src.db.repositories import SessionRepository
-from src.services import RateLimitedUser, log_usage, build_langfuse_config
 from src.models.schemas import ResearchRequest, ResearchResponse
-from src.agent.graph import create_research_agent, HITLMode
+from src.services import RateLimitedUser, build_langfuse_config, log_usage
 
 router = APIRouter(prefix="/research", tags=["research"])
 
@@ -71,8 +72,7 @@ async def run_research(
                 response_text = msg.content
             if hasattr(msg, "tool_calls") and msg.tool_calls:
                 tool_calls_list.extend(
-                    {"name": tc.get("name"), "args": tc.get("args")}
-                    for tc in msg.tool_calls
+                    {"name": tc.get("name"), "args": tc.get("args")} for tc in msg.tool_calls
                 )
 
     # Log usage
