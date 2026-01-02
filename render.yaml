@@ -40,9 +40,7 @@ services:
 
     healthCheckPath: /health
 
-    buildCommand: |
-      uv run prisma generate &&
-      uv run prisma migrate deploy
+    startCommand: uv run prisma migrate deploy && uv run uvicorn src.main:app --host 0.0.0.0 --port $PORT
 
   # ===================
   # Staging Service
@@ -82,9 +80,7 @@ services:
 
     healthCheckPath: /health
 
-    buildCommand: |
-      uv run prisma generate &&
-      uv run prisma migrate deploy
+    startCommand: uv run prisma migrate deploy && uv run uvicorn src.main:app --host 0.0.0.0 --port $PORT
 
   # ===================
   # Preview Service
@@ -124,9 +120,7 @@ services:
 
     healthCheckPath: /health
 
-    buildCommand: |
-      uv run prisma generate &&
-      uv run prisma migrate deploy
+    startCommand: uv run prisma migrate deploy && uv run uvicorn src.main:app --host 0.0.0.0 --port $PORT
 
 # ===================
 # Databases
