@@ -79,7 +79,7 @@ async def run_research(
     await log_usage(user.id, "research_query")
 
     # Update session to mark it as active
-    await repo.update_status(session_id, SessionStatus.active)
+    await repo.update_status(session_id, SessionStatus.ACTIVE)
 
     return ResearchResponse(
         request_id=request_id,
