@@ -3,7 +3,7 @@
 
 services:
   # ===================
-  # Production Service
+  # Production API Service
   # ===================
   - type: web
     name: deep-research-agent
@@ -34,13 +34,35 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: '["https://your-frontend-domain.com"]'
+        value: '["https://deep-research-ui.onrender.com"]'
       - key: ENVIRONMENT
         value: production
 
     healthCheckPath: /health
 
     startCommand: uv run prisma migrate deploy && uv run uvicorn src.main:app --host 0.0.0.0 --port $PORT
+
+  # ===================
+  # Production UI Service
+  # ===================
+  - type: web
+    name: deep-research-ui
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    branch: main
+    autoDeploy: false  # Controlled via GitHub Actions
+
+    buildCommand: docker build --build-arg NEXT_PUBLIC_API_URL=https://deep-research-agent.onrender.com -t app .
+
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://deep-research-agent.onrender.com
+      - key: NEXT_PUBLIC_COPILOTKIT_AGENT
+        value: research_agent
+
+    healthCheckPath: /
 
   # ===================
   # Staging Service
