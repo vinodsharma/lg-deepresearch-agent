@@ -12,6 +12,7 @@ from ag_ui.core import (
     ToolCallResultEvent,
     ToolCallStartEvent,
 )
+from ag_ui_langgraph.types import MessageInProgress
 from copilotkit import LangGraphAGUIAgent
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
@@ -47,6 +48,18 @@ class FixedLangGraphAGUIAgent(LangGraphAGUIAgent):
         config: Union[Optional[RunnableConfig], dict] = None,
     ):
         super().__init__(name=name, graph=graph, description=description, config=config)
+
+    def set_message_in_progress(self, run_id: str, data: MessageInProgress) -> None:
+        """Override to fix bug when messages_in_process[run_id] is None.
+
+        The base class uses .get(run_id, {}) which returns None if the key
+        exists with value None, causing **None to fail. This fix uses 'or {}'.
+        """
+        current = self.messages_in_process.get(run_id) or {}
+        self.messages_in_process[run_id] = {
+            **current,
+            **data,
+        }
 
     async def _handle_single_event(
         self, event: Any, state: Dict[str, Any]
