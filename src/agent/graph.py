@@ -8,6 +8,7 @@ from typing import Any
 from deepagents import create_deep_agent
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from .prompts import ORCHESTRATOR_PROMPT
 from .subagents import get_researcher_config
@@ -65,12 +66,15 @@ def get_model(
 def create_research_agent(
     hitl_mode: HITLMode = HITLMode.SENSITIVE,
     callbacks: list[BaseCallbackHandler] | None = None,
+    checkpointer: BaseCheckpointSaver | bool | None = None,
 ) -> Any:
     """Create the deep research agent.
 
     Args:
         hitl_mode: Human-in-the-loop configuration.
         callbacks: Optional list of callback handlers (e.g., LangFuse).
+        checkpointer: Optional checkpointer for state persistence.
+            Set to True for MemorySaver, or provide a custom checkpointer.
 
     Returns:
         Compiled LangGraph agent.
@@ -103,6 +107,7 @@ def create_research_agent(
         tools=all_tools,
         subagents=[researcher],
         interrupt_on=interrupt_config,
+        checkpointer=checkpointer,
     )
 
     return graph

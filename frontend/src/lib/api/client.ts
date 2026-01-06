@@ -7,10 +7,13 @@ interface ApiClientOptions {
 interface Session {
   id: string;
   title: string;
-  userId: string;
+  userId?: string;
   status: string;
   createdAt: string;
   updatedAt: string;
+  // Backend uses snake_case, we normalize to camelCase
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface CreateSessionRequest {
@@ -35,7 +38,7 @@ class ApiClient {
   }
 
   async createSession(data: CreateSessionRequest): Promise<Session> {
-    const response = await fetch(`${API_URL}/sessions`, {
+    const response = await fetch(`${API_URL}/sessions/`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(data),
@@ -47,13 +50,21 @@ class ApiClient {
   }
 
   async getSessions(): Promise<Session[]> {
-    const response = await fetch(`${API_URL}/sessions`, {
+    const response = await fetch(`${API_URL}/sessions/`, {
       headers: this.getHeaders(),
     });
     if (!response.ok) {
       throw new Error(`Failed to fetch sessions: ${response.statusText}`);
     }
-    return response.json();
+    const data = await response.json();
+    // Handle both array and {sessions: []} response formats
+    const sessions = Array.isArray(data) ? data : data.sessions || [];
+    // Normalize snake_case to camelCase
+    return sessions.map((s: Record<string, unknown>) => ({
+      ...s,
+      createdAt: s.createdAt || s.created_at,
+      updatedAt: s.updatedAt || s.updated_at,
+    })) as Session[];
   }
 
   async getSession(id: string): Promise<Session> {

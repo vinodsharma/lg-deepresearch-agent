@@ -16,7 +16,6 @@ const queryClient = new QueryClient({
   },
 });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const COPILOTKIT_AGENT = process.env.NEXT_PUBLIC_COPILOTKIT_AGENT || "research_agent";
 
 function CopilotKitWrapper({ children }: { children: ReactNode }) {
@@ -27,11 +26,12 @@ function CopilotKitWrapper({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
+  // Set API key synchronously when available
+  if (apiKey) {
     apiClient.setApiKey(apiKey);
-  }, [apiKey]);
+  }
 
-  // Don't render CopilotKit until hydrated
+  // Don't render until hydrated to avoid hydration mismatch
   if (!mounted) {
     return <>{children}</>;
   }
@@ -43,7 +43,7 @@ function CopilotKitWrapper({ children }: { children: ReactNode }) {
 
   return (
     <CopilotKit
-      runtimeUrl={`${API_URL}/copilotkit`}
+      runtimeUrl="/api/copilotkit"
       agent={COPILOTKIT_AGENT}
       headers={{ "X-API-Key": apiKey }}
     >
