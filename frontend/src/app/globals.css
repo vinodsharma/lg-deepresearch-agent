@@ -24,3 +24,20 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* CopilotKit chat text visibility improvements */
+[class*="copilotKitMessage"],
+[class*="copilotkit"] p,
+[class*="copilotkit"] span,
+[class*="copilotkit"] li,
+[class*="copilotkit"] div {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[class*="copilotkit"] strong,
+[class*="copilotkit"] b,
+[class*="copilotkit"] h1,
+[class*="copilotkit"] h2,
+[class*="copilotkit"] h3 {
+  color: #ffffff !important;
+}
