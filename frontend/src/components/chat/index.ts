@@ -15,3 +15,5 @@ export { ToolCallItem } from "./ToolCallItem";
 export type { ToolCallItemProps, ToolCallStatus } from "./ToolCallItem";
 
 export { CustomAssistantMessage } from "./CustomAssistantMessage";
+
+export { ToolRenderers } from "./ToolRenderers";
