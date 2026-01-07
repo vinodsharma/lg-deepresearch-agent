@@ -13,3 +13,5 @@ export type { ToolCall, ToolCallAccordionProps } from "./ToolCallAccordion";
 
 export { ToolCallItem } from "./ToolCallItem";
 export type { ToolCallItemProps, ToolCallStatus } from "./ToolCallItem";
+
+export { CustomAssistantMessage } from "./CustomAssistantMessage";
