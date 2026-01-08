@@ -7,6 +7,10 @@ from typing import Any, AsyncGenerator, Dict, Optional, Union
 
 from ag_ui.core import (
     EventType,
+    RunAgentInput,
+    RunErrorEvent,
+    RunFinishedEvent,
+    RunStartedEvent,
     ToolCallArgsEvent,
     ToolCallEndEvent,
     ToolCallResultEvent,
@@ -48,6 +52,64 @@ class FixedLangGraphAGUIAgent(LangGraphAGUIAgent):
         config: Union[Optional[RunnableConfig], dict] = None,
     ):
         super().__init__(name=name, graph=graph, description=description, config=config)
+
+    async def run(self, input: RunAgentInput) -> AsyncGenerator[str, None]:
+        """Override to ensure terminal event is always emitted.
+
+        The parent class may fail to emit RUN_FINISHED or RUN_ERROR if an
+        exception is raised during stream processing (e.g., GraphRecursionError).
+        This override wraps the parent's implementation in try/except to ensure
+        a terminal event is always yielded.
+        """
+        thread_id = input.thread_id or str(uuid.uuid4())
+        run_id = input.run_id
+
+        has_emitted_run_started = False
+        has_emitted_terminal = False
+
+        try:
+            async for event in super().run(input):
+                # Track if we've emitted required events
+                if hasattr(event, "type"):
+                    if event.type == EventType.RUN_STARTED:
+                        has_emitted_run_started = True
+                    elif event.type in (EventType.RUN_FINISHED, EventType.RUN_ERROR):
+                        has_emitted_terminal = True
+                yield event
+        except Exception as e:
+            # Log the error
+            import logging
+            logging.error(f"Error in AG-UI agent run: {e}")
+
+            # Emit RUN_STARTED if not already emitted
+            if not has_emitted_run_started:
+                yield self._dispatch_event(
+                    RunStartedEvent(
+                        type=EventType.RUN_STARTED,
+                        thread_id=thread_id,
+                        run_id=run_id,
+                    )
+                )
+
+            # Always emit RUN_ERROR for exceptions
+            yield self._dispatch_event(
+                RunErrorEvent(
+                    type=EventType.RUN_ERROR,
+                    message=str(e),
+                    code="AGENT_ERROR",
+                )
+            )
+            has_emitted_terminal = True
+        finally:
+            # Ensure terminal event is emitted if not already
+            if not has_emitted_terminal:
+                yield self._dispatch_event(
+                    RunFinishedEvent(
+                        type=EventType.RUN_FINISHED,
+                        thread_id=thread_id,
+                        run_id=run_id,
+                    )
+                )
 
     def set_message_in_progress(self, run_id: str, data: MessageInProgress) -> None:
         """Override to fix bug when messages_in_process[run_id] is None.
