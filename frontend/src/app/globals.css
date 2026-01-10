@@ -33,15 +33,17 @@ body {
   color: rgba(255, 255, 255, 0.95) !important;
 }
 
-/* Message content area - dark text on light background */
-.copilotKitMessages p,
-.copilotKitMessages span,
-.copilotKitMessages li,
-.copilotKitMessages div,
-.copilotKitMessage p,
-.copilotKitMessage span,
-.copilotKitMessage li,
-.copilotKitMessage div,
+/* Assistant message content area - dark text on light background */
+/* Use :not() to avoid overriding user messages */
+.copilotKitMessages p:not(.copilotKitUserMessage *),
+.copilotKitMessages span:not(.copilotKitUserMessage *),
+.copilotKitMessages li:not(.copilotKitUserMessage *),
+.copilotKitMessages div:not(.copilotKitUserMessage):not([class*="copilotKitUserMessage"]),
+.copilotKitAssistantMessage,
+.copilotKitAssistantMessage p,
+.copilotKitAssistantMessage span,
+.copilotKitAssistantMessage li,
+.copilotKitAssistantMessage div,
 [class*="copilotKitAssistantMessage"] p,
 [class*="copilotKitAssistantMessage"] span,
 [class*="copilotKitAssistantMessage"] li,
@@ -64,6 +66,8 @@ body {
 }
 
 /* User messages (dark background) - white text */
+.copilotKitUserMessage,
+[class*="copilotKitUserMessage"],
 [class*="copilotKitUserMessage"] p,
 [class*="copilotKitUserMessage"] span,
 [class*="copilotKitUserMessage"] div {
