@@ -61,24 +61,41 @@ class FixedLangGraphAGUIAgent(LangGraphAGUIAgent):
         This override wraps the parent's implementation in try/except to ensure
         a terminal event is always yielded.
         """
+        import logging
+
         thread_id = input.thread_id or str(uuid.uuid4())
         run_id = input.run_id
 
         has_emitted_run_started = False
         has_emitted_terminal = False
+        last_event = None
 
         try:
             async for event in super().run(input):
-                # Track if we've emitted required events
+                # Track events by checking the event object's type attribute
+                # Events are AG-UI event objects (not strings) at this point
                 if hasattr(event, "type"):
-                    if event.type == EventType.RUN_STARTED:
+                    event_type = event.type
+                    if event_type == EventType.RUN_STARTED:
                         has_emitted_run_started = True
-                    elif event.type in (EventType.RUN_FINISHED, EventType.RUN_ERROR):
+                    elif event_type in (EventType.RUN_FINISHED, EventType.RUN_ERROR):
                         has_emitted_terminal = True
+                last_event = event
                 yield event
+
+            # After generator exhausts normally, emit terminal if missing
+            if not has_emitted_terminal:
+                logging.info("AG-UI run completed without terminal event, emitting RUN_FINISHED")
+                yield self._dispatch_event(
+                    RunFinishedEvent(
+                        type=EventType.RUN_FINISHED,
+                        thread_id=thread_id,
+                        run_id=run_id or str(uuid.uuid4()),
+                    )
+                )
+
         except Exception as e:
             # Log the error
-            import logging
             logging.error(f"Error in AG-UI agent run: {e}")
 
             # Emit RUN_STARTED if not already emitted
@@ -87,7 +104,7 @@ class FixedLangGraphAGUIAgent(LangGraphAGUIAgent):
                     RunStartedEvent(
                         type=EventType.RUN_STARTED,
                         thread_id=thread_id,
-                        run_id=run_id,
+                        run_id=run_id or str(uuid.uuid4()),
                     )
                 )
 
@@ -99,17 +116,6 @@ class FixedLangGraphAGUIAgent(LangGraphAGUIAgent):
                     code="AGENT_ERROR",
                 )
             )
-            has_emitted_terminal = True
-        finally:
-            # Ensure terminal event is emitted if not already
-            if not has_emitted_terminal:
-                yield self._dispatch_event(
-                    RunFinishedEvent(
-                        type=EventType.RUN_FINISHED,
-                        thread_id=thread_id,
-                        run_id=run_id,
-                    )
-                )
 
     def set_message_in_progress(self, run_id: str, data: MessageInProgress) -> None:
         """Override to fix bug when messages_in_process[run_id] is None.
