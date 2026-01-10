@@ -43,7 +43,7 @@ def setup_copilotkit_endpoint(app: FastAPI) -> None:
         config={
             CONF: {"checkpoint_ns": ""},
             "callbacks": callbacks,
-            "recursion_limit": 50,  # Increase from default 25
+            "recursion_limit": 150,  # High limit for complex multi-topic research
         },
     )
 

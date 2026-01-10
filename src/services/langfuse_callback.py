@@ -112,5 +112,5 @@ def build_langfuse_config(
     return {
         "callbacks": callbacks,
         "metadata": metadata,
-        "recursion_limit": 30,
+        "recursion_limit": 150,
     }
