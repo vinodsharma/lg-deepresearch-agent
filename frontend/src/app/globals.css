@@ -25,19 +25,54 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* CopilotKit chat text visibility improvements */
-[class*="copilotKitMessage"],
-[class*="copilotkit"] p,
-[class*="copilotkit"] span,
-[class*="copilotkit"] li,
-[class*="copilotkit"] div {
+/* CopilotKit chat styling */
+
+/* Sidebar header (dark background) - white text */
+.copilotKitHeader,
+[class*="copilotKitHeader"] {
   color: rgba(255, 255, 255, 0.95) !important;
 }
 
-[class*="copilotkit"] strong,
-[class*="copilotkit"] b,
-[class*="copilotkit"] h1,
-[class*="copilotkit"] h2,
-[class*="copilotkit"] h3 {
-  color: #ffffff !important;
+/* Message content area - dark text on light background */
+.copilotKitMessages p,
+.copilotKitMessages span,
+.copilotKitMessages li,
+.copilotKitMessages div,
+.copilotKitMessage p,
+.copilotKitMessage span,
+.copilotKitMessage li,
+.copilotKitMessage div,
+[class*="copilotKitAssistantMessage"] p,
+[class*="copilotKitAssistantMessage"] span,
+[class*="copilotKitAssistantMessage"] li,
+[class*="copilotKitAssistantMessage"] div {
+  color: #1a1a1a !important;
+}
+
+/* Headings in messages - darker for emphasis */
+.copilotKitMessages h1,
+.copilotKitMessages h2,
+.copilotKitMessages h3,
+.copilotKitMessages strong,
+.copilotKitMessages b,
+[class*="copilotKitAssistantMessage"] h1,
+[class*="copilotKitAssistantMessage"] h2,
+[class*="copilotKitAssistantMessage"] h3,
+[class*="copilotKitAssistantMessage"] strong,
+[class*="copilotKitAssistantMessage"] b {
+  color: #000000 !important;
+}
+
+/* User messages (dark background) - white text */
+[class*="copilotKitUserMessage"] p,
+[class*="copilotKitUserMessage"] span,
+[class*="copilotKitUserMessage"] div {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Tool call displays - ensure visibility */
+[class*="ToolCall"] p,
+[class*="ToolCall"] span,
+[class*="ToolCall"] div {
+  color: #333333 !important;
 }
