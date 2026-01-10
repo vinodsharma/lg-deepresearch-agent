@@ -8,6 +8,7 @@ from langgraph.constants import CONF
 
 from src.agent.graph import HITLMode, create_research_agent
 from src.api.agui_agent import FixedLangGraphAGUIAgent
+from src.services import create_langfuse_callback
 
 # Agent configuration
 AGENT_NAME = "research_agent"
@@ -28,6 +29,10 @@ def setup_copilotkit_endpoint(app: FastAPI) -> None:
     checkpointer = MemorySaver()
     graph = create_research_agent(hitl_mode=HITLMode.NONE, checkpointer=checkpointer)
 
+    # Create Langfuse callback for observability
+    langfuse_callback = create_langfuse_callback()
+    callbacks = [langfuse_callback] if langfuse_callback else []
+
     # Wrap with our fixed LangGraph AG-UI agent
     # Provides config with checkpoint_ns for LangGraph 1.0 compatibility
     # and fixes tool_call_name being None in OnToolEnd events
@@ -35,7 +40,11 @@ def setup_copilotkit_endpoint(app: FastAPI) -> None:
         name=AGENT_NAME,
         description=AGENT_DESCRIPTION,
         graph=graph,
-        config={CONF: {"checkpoint_ns": ""}},
+        config={
+            CONF: {"checkpoint_ns": ""},
+            "callbacks": callbacks,
+            "recursion_limit": 50,  # Increase from default 25
+        },
     )
 
     # Add the AG-UI endpoint
