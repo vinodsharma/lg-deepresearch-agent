@@ -2,125 +2,266 @@
 "use client";
 
 import { useRenderToolCall } from "@copilotkit/react-core";
-import { Code, FileText, Globe, Search } from "lucide-react";
+import { useEffect, useRef } from "react";
 
-import { ToolCallItem } from "./ToolCallItem";
+import { useAgentActivityContext } from "@/contexts";
 
-function mapStatus(status: string): "executing" | "complete" | "error" {
-  if (status === "executing" || status === "inProgress") return "executing";
-  if (status === "complete") return "complete";
-  return "error";
+// Props for tool renderer components
+interface ToolRendererProps {
+  status: string;
+  args: unknown;
+  result: unknown;
+  toolCallId: string | undefined;
+  addToolCall: (params: { id: string; name: string; args: Record<string, unknown> }) => void;
+  completeToolCall: (id: string, result: unknown, error?: string) => void;
+  processedRef: React.MutableRefObject<Set<string>>;
 }
 
-function getResultSummary(toolName: string, result: unknown): string | undefined {
-  if (!result || typeof result !== "object") return undefined;
+// Generate stable ID using a counter instead of Date.now()
+let toolCallCounter = 0;
+function generateToolCallId(toolName: string): string {
+  toolCallCounter += 1;
+  return `${toolName}-${toolCallCounter}`;
+}
 
-  const res = result as Record<string, unknown>;
+// Helper hook to sync tool call state
+function useToolCallSync(
+  toolCallId: string | undefined,
+  toolName: string,
+  status: string,
+  args: unknown,
+  result: unknown,
+  addToolCall: (params: { id: string; name: string; args: Record<string, unknown> }) => void,
+  completeToolCall: (id: string, result: unknown, error?: string) => void,
+  processedRef: React.MutableRefObject<Set<string>>
+) {
+  // Generate ID only once using a ref with lazy initialization
+  const generatedIdRef = useRef<string | null>(null);
 
-  switch (toolName) {
-    case "tavily_search": {
-      const results = res.results;
-      if (Array.isArray(results)) return `Found ${results.length} results`;
-      return "Search completed";
+  // Use useEffect to generate ID on first render to avoid impure Date.now() during render
+  useEffect(() => {
+    if (!generatedIdRef.current && !toolCallId) {
+      generatedIdRef.current = generateToolCallId(toolName);
     }
-    case "fetch_url": {
-      const content = res.content;
-      if (typeof content === "string") {
-        const words = content.split(/\s+/).length;
-        return `Extracted ${words.toLocaleString()} words`;
+  }, [toolCallId, toolName]);
+
+  useEffect(() => {
+    // Skip if we're still waiting for ID generation
+    if (!toolCallId && !generatedIdRef.current) {
+      return;
+    }
+    const effectId = toolCallId || generatedIdRef.current || `${toolName}-fallback`;
+    const effectStartKey = `start-${effectId}`;
+    if (!processedRef.current.has(effectStartKey)) {
+      processedRef.current.add(effectStartKey);
+      addToolCall({
+        id: effectId,
+        name: toolName,
+        args: (args as Record<string, unknown>) || {},
+      });
+    }
+  }, [toolCallId, toolName, args, addToolCall, processedRef]);
+
+  useEffect(() => {
+    // Skip if we're still waiting for ID generation
+    if (!toolCallId && !generatedIdRef.current) {
+      return;
+    }
+    const effectId = toolCallId || generatedIdRef.current || `${toolName}-fallback`;
+    const effectCompleteKey = `complete-${effectId}`;
+    if (status === "complete" && !processedRef.current.has(effectCompleteKey)) {
+      processedRef.current.add(effectCompleteKey);
+      completeToolCall(effectId, result);
+    }
+  }, [status, toolCallId, toolName, result, completeToolCall, processedRef]);
+}
+
+// Individual tool renderer components to properly use hooks
+function TavilySearchRenderer({
+  status,
+  args,
+  result,
+  toolCallId,
+  addToolCall,
+  completeToolCall,
+  processedRef,
+}: ToolRendererProps) {
+  useToolCallSync(toolCallId, "tavily_search", status, args, result, addToolCall, completeToolCall, processedRef);
+  return null;
+}
+
+function FetchUrlRenderer({
+  status,
+  args,
+  result,
+  toolCallId,
+  addToolCall,
+  completeToolCall,
+  processedRef,
+}: ToolRendererProps) {
+  useToolCallSync(toolCallId, "fetch_url", status, args, result, addToolCall, completeToolCall, processedRef);
+  return null;
+}
+
+function AnalyzePdfRenderer({
+  status,
+  args,
+  result,
+  toolCallId,
+  addToolCall,
+  completeToolCall,
+  processedRef,
+}: ToolRendererProps) {
+  useToolCallSync(toolCallId, "analyze_pdf", status, args, result, addToolCall, completeToolCall, processedRef);
+  return null;
+}
+
+function AnalyzeDocumentRenderer({
+  status,
+  args,
+  result,
+  toolCallId,
+  addToolCall,
+  completeToolCall,
+  processedRef,
+}: ToolRendererProps) {
+  useToolCallSync(toolCallId, "analyze_document", status, args, result, addToolCall, completeToolCall, processedRef);
+  return null;
+}
+
+function E2bExecuteRenderer({
+  status,
+  args,
+  result,
+  toolCallId,
+  addToolCall,
+  completeToolCall,
+  processedRef,
+}: ToolRendererProps) {
+  useToolCallSync(toolCallId, "e2b_execute", status, args, result, addToolCall, completeToolCall, processedRef);
+  return null;
+}
+
+// Props for think renderer component
+interface ThinkRendererProps {
+  status: string;
+  args: unknown;
+  toolCallId: string | undefined;
+  setThinking: (thought: string) => void;
+  processedRef: React.MutableRefObject<Set<string>>;
+}
+
+function ThinkRenderer({ status, args, toolCallId, setThinking, processedRef }: ThinkRendererProps) {
+  const thinkKey = `think-${toolCallId || "unknown"}`;
+
+  useEffect(() => {
+    if (status === "complete" && !processedRef.current.has(thinkKey)) {
+      processedRef.current.add(thinkKey);
+      if (args && typeof args === "object") {
+        const thought = (args as Record<string, unknown>).thought;
+        if (typeof thought === "string") {
+          setThinking(thought);
+        }
       }
-      return "Page fetched";
     }
-    case "analyze_pdf":
-    case "analyze_document": {
-      const pages = res.pages;
-      if (typeof pages === "number") return `Analyzed ${pages} pages`;
-      return "Analysis completed";
-    }
-    case "e2b_execute": {
-      const output = res.output;
-      if (typeof output === "string" && output.length > 0) {
-        const firstLine = output.split("\n")[0];
-        return firstLine.length > 50 ? firstLine.slice(0, 50) + "..." : firstLine;
-      }
-      return "Execution completed";
-    }
-    default:
-      return "Completed";
-  }
+  }, [status, args, thinkKey, setThinking, processedRef]);
+
+  return null;
 }
 
 export function ToolRenderers() {
+  const { addToolCall, completeToolCall, setThinking } = useAgentActivityContext();
+  const processedRef = useRef<Set<string>>(new Set());
+
+  // Register tool renderers that feed data to context
   useRenderToolCall({
     name: "tavily_search",
-    render: ({ status, args, result }) => (
-      <ToolCallItem
-        name="Web Search"
-        status={mapStatus(status)}
-        args={args as Record<string, unknown>}
+    render: ({ status, args, result, toolCallId }) => (
+      <TavilySearchRenderer
+        status={status}
+        args={args}
         result={result}
-        resultSummary={status === "complete" ? getResultSummary("tavily_search", result) : undefined}
-        icon={<Search className="w-4 h-4" />}
+        toolCallId={toolCallId}
+        addToolCall={addToolCall}
+        completeToolCall={completeToolCall}
+        processedRef={processedRef}
       />
     ),
   });
 
   useRenderToolCall({
     name: "fetch_url",
-    render: ({ status, args, result }) => (
-      <ToolCallItem
-        name="Fetch Page"
-        status={mapStatus(status)}
-        args={args as Record<string, unknown>}
+    render: ({ status, args, result, toolCallId }) => (
+      <FetchUrlRenderer
+        status={status}
+        args={args}
         result={result}
-        resultSummary={status === "complete" ? getResultSummary("fetch_url", result) : undefined}
-        icon={<Globe className="w-4 h-4" />}
+        toolCallId={toolCallId}
+        addToolCall={addToolCall}
+        completeToolCall={completeToolCall}
+        processedRef={processedRef}
       />
     ),
   });
 
   useRenderToolCall({
     name: "analyze_pdf",
-    render: ({ status, args, result }) => (
-      <ToolCallItem
-        name="Analyze PDF"
-        status={mapStatus(status)}
-        args={args as Record<string, unknown>}
+    render: ({ status, args, result, toolCallId }) => (
+      <AnalyzePdfRenderer
+        status={status}
+        args={args}
         result={result}
-        resultSummary={status === "complete" ? getResultSummary("analyze_pdf", result) : undefined}
-        icon={<FileText className="w-4 h-4" />}
+        toolCallId={toolCallId}
+        addToolCall={addToolCall}
+        completeToolCall={completeToolCall}
+        processedRef={processedRef}
       />
     ),
   });
 
   useRenderToolCall({
     name: "analyze_document",
-    render: ({ status, args, result }) => (
-      <ToolCallItem
-        name="Analyze Doc"
-        status={mapStatus(status)}
-        args={args as Record<string, unknown>}
+    render: ({ status, args, result, toolCallId }) => (
+      <AnalyzeDocumentRenderer
+        status={status}
+        args={args}
         result={result}
-        resultSummary={status === "complete" ? getResultSummary("analyze_document", result) : undefined}
-        icon={<FileText className="w-4 h-4" />}
+        toolCallId={toolCallId}
+        addToolCall={addToolCall}
+        completeToolCall={completeToolCall}
+        processedRef={processedRef}
       />
     ),
   });
 
   useRenderToolCall({
     name: "e2b_execute",
-    render: ({ status, args, result }) => (
-      <ToolCallItem
-        name="Run Code"
-        status={mapStatus(status)}
-        args={args as Record<string, unknown>}
+    render: ({ status, args, result, toolCallId }) => (
+      <E2bExecuteRenderer
+        status={status}
+        args={args}
         result={result}
-        resultSummary={status === "complete" ? getResultSummary("e2b_execute", result) : undefined}
-        icon={<Code className="w-4 h-4" />}
+        toolCallId={toolCallId}
+        addToolCall={addToolCall}
+        completeToolCall={completeToolCall}
+        processedRef={processedRef}
       />
     ),
   });
 
-  // This component just registers the hooks, doesn't render anything
+  // Handle think tool specially with deduplication
+  useRenderToolCall({
+    name: "think",
+    render: ({ status, args, toolCallId }) => (
+      <ThinkRenderer
+        status={status}
+        args={args}
+        toolCallId={toolCallId}
+        setThinking={setThinking}
+        processedRef={processedRef}
+      />
+    ),
+  });
+
   return null;
 }
