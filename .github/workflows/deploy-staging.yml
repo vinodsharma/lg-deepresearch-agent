@@ -66,7 +66,7 @@ jobs:
         run: uv run pytest tests/ -v --tb=short || echo "No tests yet"
 
   build:
-    name: Build Docker Image
+    name: Build Docker Images
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -75,7 +75,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and verify Docker image
+      - name: Build API Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -85,34 +85,66 @@ jobs:
           cache-to: type=gha,mode=max
           tags: deep-research-agent:staging-${{ github.sha }}
 
+      - name: Build UI Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://deep-research-agent-staging.onrender.com
+          tags: deep-research-ui:staging-${{ github.sha }}
+
   deploy:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     needs: build
     environment:
       name: staging
-      url: ${{ vars.STAGING_URL }}
+      url: ${{ vars.STAGING_UI_URL }}
     steps:
-      - name: Deploy to Render Staging
+      - name: Deploy API to Render Staging
         run: |
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}"
         env:
           RENDER_DEPLOY_HOOK_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}
 
-      - name: Wait for deployment
-        run: sleep 30
+      - name: Deploy UI to Render Staging
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_UI_STAGING }}"
+        env:
+          RENDER_DEPLOY_HOOK_UI_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_UI_STAGING }}
 
-      - name: Health check
+      - name: Wait for deployments
+        run: sleep 60
+
+      - name: API Health check
         run: |
           for i in {1..10}; do
             if curl -sf "${{ vars.STAGING_URL }}/health"; then
-              echo "Health check passed!"
+              echo "API health check passed!"
               exit 0
             fi
-            echo "Attempt $i failed, retrying in 30s..."
+            echo "API attempt $i failed, retrying in 30s..."
             sleep 30
           done
-          echo "Health check failed after 10 attempts"
+          echo "API health check failed after 10 attempts"
+          exit 1
+        continue-on-error: true
+
+      - name: UI Health check
+        run: |
+          for i in {1..10}; do
+            if curl -sf "${{ vars.STAGING_UI_URL }}"; then
+              echo "UI health check passed!"
+              exit 0
+            fi
+            echo "UI attempt $i failed, retrying in 30s..."
+            sleep 30
+          done
+          echo "UI health check failed after 10 attempts"
           exit 1
         continue-on-error: true
 
@@ -124,5 +156,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: context.sha,
-              body: `🚀 Deployed to staging: ${{ vars.STAGING_URL }}`
+              body: `🚀 Deployed to staging!\n- API: ${{ vars.STAGING_URL }}\n- UI: ${{ vars.STAGING_UI_URL }}`
             })
