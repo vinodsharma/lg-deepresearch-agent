@@ -4,7 +4,6 @@ import { CopilotSidebar } from "@copilotkit/react-ui";
 import { ReactNode } from "react";
 
 import { CustomAssistantMessage, ToolRenderers } from "@/components/chat";
-import { AgentActivityProvider } from "@/contexts";
 import { useAuthStore } from "@/lib/store/auth-store";
 
 interface SidebarWrapperProps {
@@ -20,7 +19,7 @@ export function SidebarWrapper({ children }: SidebarWrapperProps) {
   }
 
   return (
-    <AgentActivityProvider>
+    <>
       <ToolRenderers />
       <CopilotSidebar
         defaultOpen={false}
@@ -34,6 +33,6 @@ export function SidebarWrapper({ children }: SidebarWrapperProps) {
       >
         {children}
       </CopilotSidebar>
-    </AgentActivityProvider>
+    </>
   );
 }

@@ -1,23 +1,14 @@
 // frontend/src/components/chat/CustomAssistantMessage.tsx
 import { AssistantMessageProps, Markdown, useChatContext } from "@copilotkit/react-ui";
 
-import { useAgentActivityContext } from "@/contexts";
-
-import { AgentActivityPanel } from "./AgentActivityPanel";
-
 export function CustomAssistantMessage(props: AssistantMessageProps) {
   const { icons } = useChatContext();
-  const { message, isLoading } = props;
-  const { toolCalls, thinking, isWorking } = useAgentActivityContext();
+  const { message, isLoading, subComponent } = props;
 
   return (
     <div className="py-2">
-      {/* Agent activity panel with accordions */}
-      <AgentActivityPanel
-        toolCalls={toolCalls}
-        thinking={thinking}
-        isWorking={isWorking || isLoading}
-      />
+      {/* Tool calls rendered inline by CopilotKit */}
+      {subComponent && <div className="mb-3">{subComponent}</div>}
 
       {/* Message content */}
       {(message?.content || isLoading) && (
