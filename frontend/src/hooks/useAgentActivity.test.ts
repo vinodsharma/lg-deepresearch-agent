@@ -1,10 +1,18 @@
 // frontend/src/hooks/useAgentActivity.test.ts
-import { renderHook, act } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { useAgentActivity } from "./useAgentActivity";
 
 describe("useAgentActivity", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("initializes with empty state", () => {
     const { result } = renderHook(() => useAgentActivity());
 
@@ -24,6 +32,11 @@ describe("useAgentActivity", () => {
       });
     });
 
+    // Wait for throttle interval to process the update
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
     expect(result.current.toolCalls).toHaveLength(1);
     expect(result.current.toolCalls[0].name).toBe("tavily_search");
     expect(result.current.toolCalls[0].status).toBe("executing");
@@ -41,8 +54,18 @@ describe("useAgentActivity", () => {
       });
     });
 
+    // Wait for throttle interval to process the add
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
     act(() => {
       result.current.completeToolCall("1", { results: [1, 2, 3] });
+    });
+
+    // Wait for throttle interval to process the complete
+    act(() => {
+      vi.advanceTimersByTime(200);
     });
 
     expect(result.current.toolCalls[0].status).toBe("complete");
@@ -67,6 +90,11 @@ describe("useAgentActivity", () => {
       result.current.setThinking("test");
     });
 
+    // Wait for throttle interval
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
     act(() => {
       result.current.reset();
     });
@@ -74,5 +102,40 @@ describe("useAgentActivity", () => {
     expect(result.current.toolCalls).toEqual([]);
     expect(result.current.thinking).toBe("");
     expect(result.current.isWorking).toBe(false);
+  });
+});
+
+describe("useAgentActivity throttling", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("batches rapid tool call additions", () => {
+    const { result } = renderHook(() => useAgentActivity());
+
+    // Add 5 tools rapidly
+    act(() => {
+      for (let i = 0; i < 5; i++) {
+        result.current.addToolCall({
+          id: `tool-${i}`,
+          name: "tavily_search",
+          args: { query: `query ${i}` },
+        });
+      }
+    });
+
+    // Before throttle interval, state should have pending updates
+    expect(result.current.toolCalls.length).toBeLessThanOrEqual(5);
+
+    // After throttle interval (150ms), all should be present
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.toolCalls.length).toBe(5);
   });
 });
