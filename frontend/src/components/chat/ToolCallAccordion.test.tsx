@@ -30,4 +30,24 @@ describe("ToolCallAccordion", () => {
 
     expect(screen.getByText("Web Search")).toBeInTheDocument();
   });
+
+  it("passes keyArgument to ToolCallItem", () => {
+    render(
+      <ToolCallAccordion
+        toolCalls={[
+          {
+            id: "1",
+            name: "tavily_search",
+            displayName: "Web Search",
+            status: "executing",
+            args: { query: "test query" },
+            keyArgument: "test query",
+          },
+        ]}
+        expanded={true}
+      />
+    );
+
+    expect(screen.getByText(/"test query"/)).toBeInTheDocument();
+  });
 });
