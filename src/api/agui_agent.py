@@ -68,7 +68,6 @@ class FixedLangGraphAGUIAgent(LangGraphAGUIAgent):
 
         has_emitted_run_started = False
         has_emitted_terminal = False
-        last_event = None
 
         try:
             async for event in super().run(input):
@@ -80,7 +79,6 @@ class FixedLangGraphAGUIAgent(LangGraphAGUIAgent):
                         has_emitted_run_started = True
                     elif event_type in (EventType.RUN_FINISHED, EventType.RUN_ERROR):
                         has_emitted_terminal = True
-                last_event = event
                 yield event
 
             # After generator exhausts normally, emit terminal if missing
@@ -149,7 +147,8 @@ class FixedLangGraphAGUIAgent(LangGraphAGUIAgent):
 
             if isinstance(tool_call_output, Command):
                 # Extract ToolMessages from Command.update
-                messages = tool_call_output.update.get("messages", [])
+                update_dict = tool_call_output.update or {}
+                messages = update_dict.get("messages", []) if isinstance(update_dict, dict) else []
                 tool_messages = [m for m in messages if isinstance(m, ToolMessage)]
 
                 # Process each tool message with fixed name
@@ -183,12 +182,17 @@ class FixedLangGraphAGUIAgent(LangGraphAGUIAgent):
                             )
                         )
 
+                    content = (
+                        tool_msg.content
+                        if isinstance(tool_msg.content, str)
+                        else _json_safe(tool_msg.content)
+                    )
                     yield self._dispatch_event(
                         ToolCallResultEvent(
                             type=EventType.TOOL_CALL_RESULT,
                             tool_call_id=tool_msg.tool_call_id,
                             message_id=str(uuid.uuid4()),
-                            content=tool_msg.content if isinstance(tool_msg.content, str) else _json_safe(tool_msg.content),
+                            content=content,
                             role="tool",
                         )
                     )
