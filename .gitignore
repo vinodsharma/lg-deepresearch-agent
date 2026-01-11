@@ -43,3 +43,6 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+
+# Playwright MCP screenshots
+.playwright-mcp/
