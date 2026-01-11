@@ -1,7 +1,9 @@
 // frontend/src/hooks/useAgentActivity.ts
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ToolCall, ToolCallStatus } from "@/components/chat";
+
+const THROTTLE_INTERVAL_MS = 150;
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
   tavily_search: "Web Search",
@@ -11,6 +13,32 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   e2b_execute: "Run Code",
   think_tool: "Thinking",
 };
+
+const KEY_ARG_FIELDS: Record<string, string> = {
+  tavily_search: "query",
+  fetch_url: "url",
+  analyze_pdf: "url",
+  analyze_document: "url",
+  e2b_execute: "code",
+};
+
+function getKeyArgument(
+  toolName: string,
+  args: Record<string, unknown>
+): string | undefined {
+  const field = KEY_ARG_FIELDS[toolName];
+  if (!field) return undefined;
+
+  const value = args[field];
+  if (typeof value !== "string") return undefined;
+
+  // For code, return just the first line
+  if (toolName === "e2b_execute") {
+    return value.split("\n")[0];
+  }
+
+  return value;
+}
 
 function getResultSummary(toolName: string, result: unknown): string {
   if (!result || typeof result !== "object") {
@@ -62,6 +90,24 @@ export interface AddToolCallParams {
   args: Record<string, unknown>;
 }
 
+interface PendingAdd {
+  type: "add";
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+  startTime: number;
+}
+
+interface PendingComplete {
+  type: "complete";
+  id: string;
+  result: unknown;
+  error?: string;
+  endTime: number;
+}
+
+type PendingUpdate = PendingAdd | PendingComplete;
+
 export interface UseAgentActivityReturn {
   toolCalls: ToolCall[];
   thinking: string;
@@ -75,48 +121,93 @@ export interface UseAgentActivityReturn {
 export function useAgentActivity(): UseAgentActivityReturn {
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
   const [thinking, setThinkingState] = useState("");
-  const [startTimes, setStartTimes] = useState<Record<string, number>>({});
+
+  // Use refs for pending updates and start times to avoid re-renders
+  const pendingUpdatesRef = useRef<PendingUpdate[]>([]);
+  const startTimesRef = useRef<Record<string, number>>({});
 
   const isWorking = toolCalls.some((tc) => tc.status === "executing");
+
+  // Process pending updates every THROTTLE_INTERVAL_MS
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (pendingUpdatesRef.current.length === 0) return;
+
+      // Take all pending updates
+      const updates = pendingUpdatesRef.current;
+      pendingUpdatesRef.current = [];
+
+      setToolCalls((prev) => {
+        let newToolCalls = [...prev];
+
+        for (const update of updates) {
+          if (update.type === "add") {
+            // Record start time
+            startTimesRef.current[update.id] = update.startTime;
+
+            // Add new tool call
+            newToolCalls.push({
+              id: update.id,
+              name: update.name,
+              displayName: TOOL_DISPLAY_NAMES[update.name] || update.name,
+              status: "executing" as ToolCallStatus,
+              args: update.args,
+              keyArgument: getKeyArgument(update.name, update.args),
+            });
+          } else if (update.type === "complete") {
+            // Complete existing tool call
+            newToolCalls = newToolCalls.map((tc) => {
+              if (tc.id !== update.id) return tc;
+
+              const startTime = startTimesRef.current[update.id];
+              const durationMs = startTime
+                ? update.endTime - startTime
+                : undefined;
+
+              return {
+                ...tc,
+                status: update.error ? "error" : "complete",
+                result: update.result,
+                resultSummary: update.error
+                  ? undefined
+                  : getResultSummary(tc.name, update.result),
+                error: update.error,
+                durationMs,
+              };
+            });
+          }
+        }
+
+        return newToolCalls;
+      });
+    }, THROTTLE_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   const addToolCall = useCallback((params: AddToolCallParams) => {
     const { id, name, args } = params;
 
-    setStartTimes((prev) => ({ ...prev, [id]: Date.now() }));
-
-    setToolCalls((prev) => [
-      ...prev,
-      {
-        id,
-        name,
-        displayName: TOOL_DISPLAY_NAMES[name] || name,
-        status: "executing" as ToolCallStatus,
-        args,
-      },
-    ]);
+    pendingUpdatesRef.current.push({
+      type: "add",
+      id,
+      name,
+      args,
+      startTime: Date.now(),
+    });
   }, []);
 
   const completeToolCall = useCallback(
     (id: string, result: unknown, error?: string) => {
-      setToolCalls((prev) =>
-        prev.map((tc) => {
-          if (tc.id !== id) return tc;
-
-          const startTime = startTimes[id];
-          const durationMs = startTime ? Date.now() - startTime : undefined;
-
-          return {
-            ...tc,
-            status: error ? "error" : "complete",
-            result,
-            resultSummary: error ? undefined : getResultSummary(tc.name, result),
-            error,
-            durationMs,
-          };
-        })
-      );
+      pendingUpdatesRef.current.push({
+        type: "complete",
+        id,
+        result,
+        error,
+        endTime: Date.now(),
+      });
     },
-    [startTimes]
+    []
   );
 
   const setThinking = useCallback((content: string) => {
@@ -126,7 +217,8 @@ export function useAgentActivity(): UseAgentActivityReturn {
   const reset = useCallback(() => {
     setToolCalls([]);
     setThinkingState("");
-    setStartTimes({});
+    pendingUpdatesRef.current = [];
+    startTimesRef.current = {};
   }, []);
 
   return {

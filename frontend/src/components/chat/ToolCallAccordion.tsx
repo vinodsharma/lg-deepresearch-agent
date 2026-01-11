@@ -21,6 +21,7 @@ export interface ToolCall {
   resultSummary?: string;
   error?: string;
   durationMs?: number;
+  keyArgument?: string;
 }
 
 export interface ToolCallAccordionProps {
@@ -64,6 +65,7 @@ export function ToolCallAccordion({
             resultSummary={tool.resultSummary}
             error={tool.error}
             durationMs={tool.durationMs}
+            keyArgument={tool.keyArgument}
             icon={TOOL_ICONS[tool.name] || <Wrench className="w-4 h-4" />}
           />
         ))}

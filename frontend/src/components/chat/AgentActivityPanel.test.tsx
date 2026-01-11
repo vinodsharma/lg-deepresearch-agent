@@ -43,7 +43,7 @@ describe("AgentActivityPanel", () => {
 
   it("expands accordions when working", () => {
     const toolCalls: ToolCall[] = [
-      { id: "1", name: "tavily_search", displayName: "Web Search", status: "executing", args: { query: "test" } },
+      { id: "1", name: "tavily_search", displayName: "Web Search", status: "executing", args: { query: "test" }, keyArgument: "test query" },
     ];
 
     render(
@@ -54,7 +54,7 @@ describe("AgentActivityPanel", () => {
       />
     );
 
-    // Content should be visible when expanded
-    expect(screen.getByText(/query/)).toBeInTheDocument();
+    // Content should be visible when expanded - keyArgument is now used to display the query
+    expect(screen.getByText(/test query/)).toBeInTheDocument();
   });
 });
