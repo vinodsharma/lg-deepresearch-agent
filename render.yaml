@@ -34,7 +34,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: '["https://deep-research-ui.onrender.com"]'
+        value: https://deep-research-ui.onrender.com
       - key: ENVIRONMENT
         value: production
 
@@ -96,7 +96,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: '["https://deep-research-ui-staging.onrender.com"]'
+        value: https://deep-research-ui-staging.onrender.com
       - key: ENVIRONMENT
         value: staging
 
@@ -156,7 +156,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: '["*"]'
+        value: "*"
       - key: ENVIRONMENT
         value: preview
 
