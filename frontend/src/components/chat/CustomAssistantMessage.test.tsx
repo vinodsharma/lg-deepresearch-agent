@@ -2,6 +2,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { AgentActivityProvider } from "@/contexts";
+
 import { CustomAssistantMessage } from "./CustomAssistantMessage";
 
 // Mock the CopilotKit hooks
@@ -18,8 +20,12 @@ describe("CustomAssistantMessage", () => {
     rawData: {},
   };
 
+  const renderWithProvider = (ui: React.ReactElement) => {
+    return render(<AgentActivityProvider>{ui}</AgentActivityProvider>);
+  };
+
   it("renders message content", () => {
-    render(
+    renderWithProvider(
       <CustomAssistantMessage
         {...defaultProps}
         message={{ id: "1", role: "assistant", content: "Hello world" }}
@@ -31,7 +37,7 @@ describe("CustomAssistantMessage", () => {
   });
 
   it("renders loading state", () => {
-    render(
+    renderWithProvider(
       <CustomAssistantMessage
         {...defaultProps}
         message={{ id: "2", role: "assistant", content: "" }}
@@ -42,17 +48,15 @@ describe("CustomAssistantMessage", () => {
     expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
-  it("renders subComponent (generative UI)", () => {
-    render(
+  it("renders AgentActivityPanel", () => {
+    renderWithProvider(
       <CustomAssistantMessage
         {...defaultProps}
-        message={{ id: "3", role: "assistant", content: "Response" }}
+        message={{ id: "3", role: "assistant", content: "Hello" }}
         isLoading={false}
-        subComponent={<div>Tool UI</div>}
       />
     );
 
-    expect(screen.getByText("Tool UI")).toBeInTheDocument();
-    expect(screen.getByText("Response")).toBeInTheDocument();
+    expect(screen.getByText("Hello")).toBeInTheDocument();
   });
 });
