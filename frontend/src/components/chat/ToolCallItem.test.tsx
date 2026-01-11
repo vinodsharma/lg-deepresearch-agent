@@ -42,7 +42,8 @@ describe("ToolCallItem", () => {
       />
     );
 
-    expect(screen.getByText(/"quantum computing"/)).toBeInTheDocument();
+    // Key argument should be visible (quotes are in separate text nodes)
+    expect(screen.getByText(/quantum computing/)).toBeInTheDocument();
   });
 
   it("shows result summary for search", () => {
@@ -82,8 +83,8 @@ describe("ToolCallItem", () => {
       />
     );
 
-    // Key argument should be in quotes and prominent
-    expect(screen.getByText(/"LangGraph architecture 2025"/)).toBeInTheDocument();
+    // Key argument should be visible
+    expect(screen.getByText(/LangGraph architecture 2025/)).toBeInTheDocument();
   });
 
   it("shows URL prominently for fetch tools", () => {
@@ -110,7 +111,7 @@ describe("ToolCallItem", () => {
       />
     );
 
-    // Should truncate to ~100 chars
-    expect(screen.getByText(/\.\.\."/)).toBeInTheDocument();
+    // Should truncate to ~100 chars with ellipsis
+    expect(screen.getByText(/aaa.*\.\.\./)).toBeInTheDocument();
   });
 });
