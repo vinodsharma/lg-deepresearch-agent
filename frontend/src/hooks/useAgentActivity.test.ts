@@ -128,8 +128,8 @@ describe("useAgentActivity throttling", () => {
       }
     });
 
-    // Before throttle interval, state should have pending updates
-    expect(result.current.toolCalls.length).toBeLessThanOrEqual(5);
+    // Before throttle interval fires, updates are pending so array is empty
+    expect(result.current.toolCalls).toHaveLength(0);
 
     // After throttle interval (150ms), all should be present
     act(() => {
