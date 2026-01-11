@@ -31,17 +31,18 @@ describe("ToolCallItem", () => {
     expect(screen.getByText("1.2s")).toBeInTheDocument();
   });
 
-  it("shows args summary", () => {
+  it("shows key argument when provided", () => {
     render(
       <ToolCallItem
         name="Web Search"
         status="complete"
         args={{ query: "quantum computing" }}
+        keyArgument="quantum computing"
         result={{ results: [] }}
       />
     );
 
-    expect(screen.getByText(/quantum computing/)).toBeInTheDocument();
+    expect(screen.getByText(/"quantum computing"/)).toBeInTheDocument();
   });
 
   it("shows result summary for search", () => {
@@ -69,5 +70,47 @@ describe("ToolCallItem", () => {
     );
 
     expect(screen.getByText("Network timeout")).toBeInTheDocument();
+  });
+
+  it("shows query prominently for search tools", () => {
+    render(
+      <ToolCallItem
+        name="Web Search"
+        status="executing"
+        args={{ query: "LangGraph architecture 2025" }}
+        keyArgument="LangGraph architecture 2025"
+      />
+    );
+
+    // Key argument should be in quotes and prominent
+    expect(screen.getByText(/"LangGraph architecture 2025"/)).toBeInTheDocument();
+  });
+
+  it("shows URL prominently for fetch tools", () => {
+    render(
+      <ToolCallItem
+        name="Fetch Page"
+        status="executing"
+        args={{ url: "https://docs.example.com/api" }}
+        keyArgument="https://docs.example.com/api"
+      />
+    );
+
+    expect(screen.getByText(/docs\.example\.com/)).toBeInTheDocument();
+  });
+
+  it("truncates long key arguments with ellipsis", () => {
+    const longQuery = "a".repeat(120);
+    render(
+      <ToolCallItem
+        name="Web Search"
+        status="executing"
+        args={{ query: longQuery }}
+        keyArgument={longQuery}
+      />
+    );
+
+    // Should truncate to ~100 chars
+    expect(screen.getByText(/\.\.\."/)).toBeInTheDocument();
   });
 });

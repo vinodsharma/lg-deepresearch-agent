@@ -1,5 +1,5 @@
 import { AlertCircle, Check, Loader2 } from "lucide-react";
-import { ReactNode } from "react";
+import { memo, ReactNode } from "react";
 
 export type ToolCallStatus = "executing" | "complete" | "error";
 
@@ -12,28 +12,23 @@ export interface ToolCallItemProps {
   error?: string;
   durationMs?: number;
   icon?: ReactNode;
+  keyArgument?: string;
 }
 
-export function ToolCallItem({
+function truncateKeyArg(value: string, maxLength: number = 100): string {
+  if (value.length <= maxLength) return value;
+  return value.slice(0, maxLength) + "...";
+}
+
+export const ToolCallItem = memo(function ToolCallItem({
   name,
   status,
-  args,
+  keyArgument,
   resultSummary,
   error,
   durationMs,
   icon,
 }: ToolCallItemProps) {
-  const argsSummary = Object.entries(args)
-    .slice(0, 2)
-    .map(([key, value]) => {
-      const strValue =
-        typeof value === "string" ? value : JSON.stringify(value);
-      const truncated =
-        strValue.length > 40 ? strValue.slice(0, 40) + "..." : strValue;
-      return `${key}: ${truncated}`;
-    })
-    .join(", ");
-
   return (
     <div className="flex items-start gap-3 py-2 px-3 border-b border-slate-600/50 last:border-b-0">
       <div className="mt-0.5 text-white">{icon}</div>
@@ -64,8 +59,10 @@ export function ToolCallItem({
           </div>
         </div>
 
-        {argsSummary && (
-          <p className="text-xs text-white/90 mt-0.5 truncate">{argsSummary}</p>
+        {keyArgument && (
+          <p className="text-xs text-blue-300 mt-0.5 truncate" title={keyArgument}>
+            "{truncateKeyArg(keyArgument)}"
+          </p>
         )}
 
         {status === "complete" && resultSummary && (
@@ -78,4 +75,4 @@ export function ToolCallItem({
       </div>
     </div>
   );
-}
+});
