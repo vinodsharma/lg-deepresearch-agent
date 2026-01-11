@@ -1,4 +1,6 @@
 # .github/workflows/deploy-preview.yml
+# Preview deployments for feature branches
+# Uses Render API to dynamically update service branch before deploying
 name: Deploy Preview
 
 on:
@@ -14,11 +16,14 @@ on:
       - 'docs/**'
 
 concurrency:
-  group: preview
+  group: preview-${{ github.ref_name }}
   cancel-in-progress: true
 
 env:
   PYTHON_VERSION: "3.11"
+  # Render service IDs for preview environment
+  RENDER_API_SERVICE_ID: srv-d5bcqqpr0fns738she1g
+  RENDER_UI_SERVICE_ID: srv-d5hpssv5r7bs73bk2qt0
 
 jobs:
   test:
@@ -110,6 +115,22 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - name: Update API service branch
+        run: |
+          echo "Updating API preview service to branch: ${{ github.ref_name }}"
+          curl -s -X PATCH "https://api.render.com/v1/services/${{ env.RENDER_API_SERVICE_ID }}" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"branch": "${{ github.ref_name }}"}'
+
+      - name: Update UI service branch
+        run: |
+          echo "Updating UI preview service to branch: ${{ github.ref_name }}"
+          curl -s -X PATCH "https://api.render.com/v1/services/${{ env.RENDER_UI_SERVICE_ID }}" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"branch": "${{ github.ref_name }}"}'
+
       - name: Deploy API to Render Preview
         run: |
           echo "Deploying API branch ${{ github.ref_name }} to preview environment..."
