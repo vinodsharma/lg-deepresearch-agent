@@ -1,5 +1,5 @@
 import { AlertCircle, Check, Loader2 } from "lucide-react";
-import { memo, ReactNode } from "react";
+import { memo, ReactNode, useRef, useState, useEffect } from "react";
 
 export type ToolCallStatus = "executing" | "complete" | "error";
 
@@ -20,7 +20,58 @@ function truncateKeyArg(value: string, maxLength: number = 100): string {
   return value.slice(0, maxLength) + "...";
 }
 
-export const ToolCallItem = memo(function ToolCallItem({
+// Throttle interval in ms - prevents UI freezing during heavy operations
+const THROTTLE_INTERVAL = 200;
+
+// Hook that throttles state updates to prevent UI freezing
+function useThrottledState<T>(value: T, isImportant: boolean): T {
+  const [throttledValue, setThrottledValue] = useState(value);
+  const lastUpdateRef = useRef(Date.now());
+  const pendingValueRef = useRef(value);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    pendingValueRef.current = value;
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastUpdateRef.current;
+
+    // Always update immediately for important changes (complete/error)
+    if (isImportant) {
+      lastUpdateRef.current = now;
+      setThrottledValue(value);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
+    // Throttle non-important updates
+    if (timeSinceLastUpdate >= THROTTLE_INTERVAL) {
+      lastUpdateRef.current = now;
+      setThrottledValue(value);
+    } else if (!timerRef.current) {
+      // Schedule update for later
+      timerRef.current = setTimeout(() => {
+        lastUpdateRef.current = Date.now();
+        setThrottledValue(pendingValueRef.current);
+        timerRef.current = null;
+      }, THROTTLE_INTERVAL - timeSinceLastUpdate);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [value, isImportant]);
+
+  return throttledValue;
+}
+
+// Simple presentational component - pure rendering, no hooks
+function ToolCallItemView({
   name,
   status,
   keyArgument,
@@ -28,7 +79,15 @@ export const ToolCallItem = memo(function ToolCallItem({
   error,
   durationMs,
   icon,
-}: ToolCallItemProps) {
+}: {
+  name: string;
+  status: ToolCallStatus;
+  keyArgument?: string;
+  resultSummary?: string;
+  error?: string;
+  durationMs?: number;
+  icon?: ReactNode;
+}) {
   return (
     <div className="flex items-start gap-3 py-2 px-3 border-b border-slate-600/50 last:border-b-0">
       <div className="mt-0.5 text-white">{icon}</div>
@@ -74,5 +133,38 @@ export const ToolCallItem = memo(function ToolCallItem({
         )}
       </div>
     </div>
+  );
+}
+
+// Memoized view component
+const MemoizedToolCallItemView = memo(ToolCallItemView);
+
+// Main component with throttling logic
+export const ToolCallItem = memo(function ToolCallItem(props: ToolCallItemProps) {
+  const { name, status, keyArgument, resultSummary, error, durationMs, icon } = props;
+
+  // Track previous status to detect important transitions
+  const prevStatusRef = useRef(status);
+  const isImportantUpdate = status !== prevStatusRef.current &&
+    (status === "complete" || status === "error");
+
+  useEffect(() => {
+    prevStatusRef.current = status;
+  }, [status]);
+
+  // Throttle the status updates to prevent UI freezing
+  const throttledStatus = useThrottledState(status, isImportantUpdate);
+  const throttledResultSummary = useThrottledState(resultSummary, isImportantUpdate);
+
+  return (
+    <MemoizedToolCallItemView
+      name={name}
+      status={throttledStatus}
+      keyArgument={keyArgument}
+      resultSummary={throttledResultSummary}
+      error={error}
+      durationMs={durationMs}
+      icon={icon}
+    />
   );
 });
