@@ -14,19 +14,20 @@ class ResearchAgentState(MessagesState):
     """
 
     # Current step in the research process
-    current_step: str = "idle"  # idle, planning, searching, analyzing, synthesizing
+    # idle, planning, searching, analyzing, synthesizing
+    current_step: str = "idle"  # type: ignore[misc]
 
-    # Search queries and their status
-    searches: list[dict[str, Any]] = []  # {query, status, results_count}
+    # Search queries and their status - {query, status, results_count}
+    searches: list[dict[str, Any]] = []  # type: ignore[misc]
 
-    # Sources discovered during research
-    sources_found: list[dict[str, Any]] = []  # {url, title, snippet}
+    # Sources discovered during research - {url, title, snippet}
+    sources_found: list[dict[str, Any]] = []  # type: ignore[misc]
 
     # Log of tool calls made
-    tool_calls_log: list[dict[str, Any]] = []
+    tool_calls_log: list[dict[str, Any]] = []  # type: ignore[misc]
 
     # Whether research is complete
-    research_complete: bool = False
+    research_complete: bool = False  # type: ignore[misc]
 
     # Final research report
-    final_report: str | None = None
+    final_report: str | None = None  # type: ignore[misc]

@@ -1,8 +1,6 @@
 # tests/test_agent/test_state.py
 """Tests for research agent state module."""
 
-import pytest
-
 
 def test_research_agent_state_default_values():
     """Test ResearchAgentState has correct default values defined."""
