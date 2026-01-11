@@ -61,7 +61,7 @@ export const ToolCallItem = memo(function ToolCallItem({
 
         {keyArgument && (
           <p className="text-xs text-blue-300 mt-0.5 truncate" title={keyArgument}>
-            "{truncateKeyArg(keyArgument)}"
+            &ldquo;{truncateKeyArg(keyArgument)}&rdquo;
           </p>
         )}
 

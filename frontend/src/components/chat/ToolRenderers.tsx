@@ -11,7 +11,6 @@ interface ToolRendererProps {
   status: string;
   args: unknown;
   result: unknown;
-  toolCallId: string | undefined;
   addToolCall: (params: { id: string; name: string; args: Record<string, unknown> }) => void;
   completeToolCall: (id: string, result: unknown, error?: string) => void;
   processedRef: React.MutableRefObject<Set<string>>;
@@ -26,7 +25,6 @@ function generateToolCallId(toolName: string): string {
 
 // Helper hook to sync tool call state
 function useToolCallSync(
-  toolCallId: string | undefined,
   toolName: string,
   status: string,
   args: unknown,
@@ -38,42 +36,32 @@ function useToolCallSync(
   // Generate ID only once using a ref with lazy initialization
   const generatedIdRef = useRef<string | null>(null);
 
-  // Use useEffect to generate ID on first render to avoid impure Date.now() during render
-  useEffect(() => {
-    if (!generatedIdRef.current && !toolCallId) {
-      generatedIdRef.current = generateToolCallId(toolName);
-    }
-  }, [toolCallId, toolName]);
+  // Generate ID on first render
+  if (!generatedIdRef.current) {
+    generatedIdRef.current = generateToolCallId(toolName);
+  }
+
+  const id = generatedIdRef.current;
 
   useEffect(() => {
-    // Skip if we're still waiting for ID generation
-    if (!toolCallId && !generatedIdRef.current) {
-      return;
-    }
-    const effectId = toolCallId || generatedIdRef.current || `${toolName}-fallback`;
-    const effectStartKey = `start-${effectId}`;
-    if (!processedRef.current.has(effectStartKey)) {
-      processedRef.current.add(effectStartKey);
+    const startKey = `start-${id}`;
+    if (!processedRef.current.has(startKey)) {
+      processedRef.current.add(startKey);
       addToolCall({
-        id: effectId,
+        id,
         name: toolName,
         args: (args as Record<string, unknown>) || {},
       });
     }
-  }, [toolCallId, toolName, args, addToolCall, processedRef]);
+  }, [id, toolName, args, addToolCall, processedRef]);
 
   useEffect(() => {
-    // Skip if we're still waiting for ID generation
-    if (!toolCallId && !generatedIdRef.current) {
-      return;
+    const completeKey = `complete-${id}`;
+    if (status === "complete" && !processedRef.current.has(completeKey)) {
+      processedRef.current.add(completeKey);
+      completeToolCall(id, result);
     }
-    const effectId = toolCallId || generatedIdRef.current || `${toolName}-fallback`;
-    const effectCompleteKey = `complete-${effectId}`;
-    if (status === "complete" && !processedRef.current.has(effectCompleteKey)) {
-      processedRef.current.add(effectCompleteKey);
-      completeToolCall(effectId, result);
-    }
-  }, [status, toolCallId, toolName, result, completeToolCall, processedRef]);
+  }, [status, id, result, completeToolCall, processedRef]);
 }
 
 // Individual tool renderer components to properly use hooks
@@ -81,12 +69,11 @@ function TavilySearchRenderer({
   status,
   args,
   result,
-  toolCallId,
   addToolCall,
   completeToolCall,
   processedRef,
 }: ToolRendererProps) {
-  useToolCallSync(toolCallId, "tavily_search", status, args, result, addToolCall, completeToolCall, processedRef);
+  useToolCallSync("tavily_search", status, args, result, addToolCall, completeToolCall, processedRef);
   return null;
 }
 
@@ -94,12 +81,11 @@ function FetchUrlRenderer({
   status,
   args,
   result,
-  toolCallId,
   addToolCall,
   completeToolCall,
   processedRef,
 }: ToolRendererProps) {
-  useToolCallSync(toolCallId, "fetch_url", status, args, result, addToolCall, completeToolCall, processedRef);
+  useToolCallSync("fetch_url", status, args, result, addToolCall, completeToolCall, processedRef);
   return null;
 }
 
@@ -107,12 +93,11 @@ function AnalyzePdfRenderer({
   status,
   args,
   result,
-  toolCallId,
   addToolCall,
   completeToolCall,
   processedRef,
 }: ToolRendererProps) {
-  useToolCallSync(toolCallId, "analyze_pdf", status, args, result, addToolCall, completeToolCall, processedRef);
+  useToolCallSync("analyze_pdf", status, args, result, addToolCall, completeToolCall, processedRef);
   return null;
 }
 
@@ -120,12 +105,11 @@ function AnalyzeDocumentRenderer({
   status,
   args,
   result,
-  toolCallId,
   addToolCall,
   completeToolCall,
   processedRef,
 }: ToolRendererProps) {
-  useToolCallSync(toolCallId, "analyze_document", status, args, result, addToolCall, completeToolCall, processedRef);
+  useToolCallSync("analyze_document", status, args, result, addToolCall, completeToolCall, processedRef);
   return null;
 }
 
@@ -133,12 +117,11 @@ function E2bExecuteRenderer({
   status,
   args,
   result,
-  toolCallId,
   addToolCall,
   completeToolCall,
   processedRef,
 }: ToolRendererProps) {
-  useToolCallSync(toolCallId, "e2b_execute", status, args, result, addToolCall, completeToolCall, processedRef);
+  useToolCallSync("e2b_execute", status, args, result, addToolCall, completeToolCall, processedRef);
   return null;
 }
 
@@ -146,13 +129,19 @@ function E2bExecuteRenderer({
 interface ThinkRendererProps {
   status: string;
   args: unknown;
-  toolCallId: string | undefined;
   setThinking: (thought: string) => void;
   processedRef: React.MutableRefObject<Set<string>>;
 }
 
-function ThinkRenderer({ status, args, toolCallId, setThinking, processedRef }: ThinkRendererProps) {
-  const thinkKey = `think-${toolCallId || "unknown"}`;
+let thinkCounter = 0;
+
+function ThinkRenderer({ status, args, setThinking, processedRef }: ThinkRendererProps) {
+  const thinkIdRef = useRef<string | null>(null);
+  if (!thinkIdRef.current) {
+    thinkCounter += 1;
+    thinkIdRef.current = `think-${thinkCounter}`;
+  }
+  const thinkKey = thinkIdRef.current;
 
   useEffect(() => {
     if (status === "complete" && !processedRef.current.has(thinkKey)) {
@@ -176,12 +165,11 @@ export function ToolRenderers() {
   // Register tool renderers that feed data to context
   useRenderToolCall({
     name: "tavily_search",
-    render: ({ status, args, result, toolCallId }) => (
+    render: ({ status, args, result }) => (
       <TavilySearchRenderer
         status={status}
         args={args}
         result={result}
-        toolCallId={toolCallId}
         addToolCall={addToolCall}
         completeToolCall={completeToolCall}
         processedRef={processedRef}
@@ -191,12 +179,11 @@ export function ToolRenderers() {
 
   useRenderToolCall({
     name: "fetch_url",
-    render: ({ status, args, result, toolCallId }) => (
+    render: ({ status, args, result }) => (
       <FetchUrlRenderer
         status={status}
         args={args}
         result={result}
-        toolCallId={toolCallId}
         addToolCall={addToolCall}
         completeToolCall={completeToolCall}
         processedRef={processedRef}
@@ -206,12 +193,11 @@ export function ToolRenderers() {
 
   useRenderToolCall({
     name: "analyze_pdf",
-    render: ({ status, args, result, toolCallId }) => (
+    render: ({ status, args, result }) => (
       <AnalyzePdfRenderer
         status={status}
         args={args}
         result={result}
-        toolCallId={toolCallId}
         addToolCall={addToolCall}
         completeToolCall={completeToolCall}
         processedRef={processedRef}
@@ -221,12 +207,11 @@ export function ToolRenderers() {
 
   useRenderToolCall({
     name: "analyze_document",
-    render: ({ status, args, result, toolCallId }) => (
+    render: ({ status, args, result }) => (
       <AnalyzeDocumentRenderer
         status={status}
         args={args}
         result={result}
-        toolCallId={toolCallId}
         addToolCall={addToolCall}
         completeToolCall={completeToolCall}
         processedRef={processedRef}
@@ -236,12 +221,11 @@ export function ToolRenderers() {
 
   useRenderToolCall({
     name: "e2b_execute",
-    render: ({ status, args, result, toolCallId }) => (
+    render: ({ status, args, result }) => (
       <E2bExecuteRenderer
         status={status}
         args={args}
         result={result}
-        toolCallId={toolCallId}
         addToolCall={addToolCall}
         completeToolCall={completeToolCall}
         processedRef={processedRef}
@@ -252,11 +236,10 @@ export function ToolRenderers() {
   // Handle think tool specially with deduplication
   useRenderToolCall({
     name: "think",
-    render: ({ status, args, toolCallId }) => (
+    render: ({ status, args }) => (
       <ThinkRenderer
         status={status}
         args={args}
-        toolCallId={toolCallId}
         setThinking={setThinking}
         processedRef={processedRef}
       />

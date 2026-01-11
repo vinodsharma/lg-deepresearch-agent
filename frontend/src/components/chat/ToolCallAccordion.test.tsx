@@ -48,6 +48,7 @@ describe("ToolCallAccordion", () => {
       />
     );
 
-    expect(screen.getByText(/"test query"/)).toBeInTheDocument();
+    // Key argument should be visible
+    expect(screen.getByText(/test query/)).toBeInTheDocument();
   });
 });
