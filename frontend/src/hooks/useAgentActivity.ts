@@ -156,13 +156,16 @@ export function useAgentActivity(): UseAgentActivityReturn {
             });
           } else if (update.type === "complete") {
             // Complete existing tool call
+            const startTime = startTimesRef.current[update.id];
+            const durationMs = startTime
+              ? update.endTime - startTime
+              : undefined;
+
+            // Clean up start time entry to prevent memory leak
+            delete startTimesRef.current[update.id];
+
             newToolCalls = newToolCalls.map((tc) => {
               if (tc.id !== update.id) return tc;
-
-              const startTime = startTimesRef.current[update.id];
-              const durationMs = startTime
-                ? update.endTime - startTime
-                : undefined;
 
               return {
                 ...tc,
