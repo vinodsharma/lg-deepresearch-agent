@@ -7,6 +7,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.copilotkit import setup_copilotkit_endpoint
 from src.api.research import router as research_router
 from src.api.routes import router
 from src.api.sessions import router as sessions_router
@@ -38,7 +39,7 @@ def create_app() -> FastAPI:
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.allowed_origins,
+        allow_origins=settings.allowed_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -48,6 +49,9 @@ def create_app() -> FastAPI:
     app.include_router(router)
     app.include_router(sessions_router)
     app.include_router(research_router)
+
+    # Set up CopilotKit AG-UI endpoint
+    setup_copilotkit_endpoint(app)
 
     return app
 

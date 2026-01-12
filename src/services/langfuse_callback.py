@@ -33,6 +33,7 @@ def get_langfuse_client() -> Langfuse | None:
         public_key=public_key,
         secret_key=secret_key,
         host=host,
+        timeout=30,  # Increase timeout from default 5s to 30s
     )
     return _langfuse_client
 
@@ -111,5 +112,5 @@ def build_langfuse_config(
     return {
         "callbacks": callbacks,
         "metadata": metadata,
-        "recursion_limit": 30,
+        "recursion_limit": 150,
     }

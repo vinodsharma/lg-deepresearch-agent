@@ -1,27 +1,12 @@
-services:
-  app:
-    build:
-      context: .
-      target: development
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
-      - /app/.venv  # Exclude venv from mount
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/deepresearch
-    env_file:
-      - .env
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - deepresearch
+# docker-compose.yml
+# Local development and testing environment
 
+services:
+  # PostgreSQL Database
   db:
     image: postgres:16-alpine
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -36,8 +21,100 @@ services:
     networks:
       - deepresearch
 
+  # Backend API
+  backend:
+    build:
+      context: .
+      target: development
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/deepresearch
+      ALLOWED_ORIGINS: '["http://localhost:3000", "http://localhost:3001"]'
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - backend_venv:/app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - deepresearch
+    command: >
+      sh -c "uv run prisma generate &&
+             uv run prisma migrate deploy &&
+             uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  # Frontend UI
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_COPILOTKIT_AGENT: research_agent
+      # Internal Docker network URL for server-side API calls
+      BACKEND_URL: http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    depends_on:
+      - backend
+    networks:
+      - deepresearch
+
+  # Backend Tests
+  backend-test:
+    build:
+      context: .
+      target: development
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/deepresearch_test
+      OPENROUTER_API_KEY: test-key
+      TAVILY_API_KEY: test-key
+      E2B_API_KEY: test-key
+      LANGFUSE_PUBLIC_KEY: test-key
+      LANGFUSE_SECRET_KEY: test-key
+      LANGFUSE_HOST: https://us.cloud.langfuse.com
+      JWT_SECRET: test-secret
+    volumes:
+      - ./tests:/app/tests:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - deepresearch
+    command: >
+      sh -c "uv run prisma generate &&
+             uv run pytest tests/ -v --tb=short"
+    profiles:
+      - test
+
+  # Frontend Tests
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    command: npm run test
+    profiles:
+      - test
+    networks:
+      - deepresearch
+
 volumes:
   postgres_data:
+  backend_venv:
+  frontend_node_modules:
+  frontend_next:
 
 networks:
   deepresearch:

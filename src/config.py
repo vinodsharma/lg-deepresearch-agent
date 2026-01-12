@@ -2,9 +2,7 @@
 
 import json
 from functools import lru_cache
-from typing import Any
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,28 +46,24 @@ class Settings(BaseSettings):
     pro_tier_rpm: int = 60
     pro_tier_rpd: int = 1000
 
-    # CORS
-    allowed_origins: list[str] = ["http://localhost:3000"]
+    # CORS - stored as string to avoid pydantic-settings parsing issues
+    allowed_origins: str = "http://localhost:3000"
 
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def parse_allowed_origins(cls, v: Any) -> list[str]:
-        """Parse allowed_origins from string or list."""
-        if isinstance(v, list):
-            return v
-        if isinstance(v, str):
-            # Try JSON first
-            try:
-                parsed = json.loads(v)
-                if isinstance(parsed, list):
-                    return parsed
-            except json.JSONDecodeError:
-                pass
-            # Treat as comma-separated or single value
-            if "," in v:
-                return [origin.strip() for origin in v.split(",")]
-            return [v]
-        return v
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        """Parse allowed_origins from string into list."""
+        v = self.allowed_origins
+        # Try JSON first
+        try:
+            parsed = json.loads(v)
+            if isinstance(parsed, list):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+        # Treat as comma-separated or single value
+        if "," in v:
+            return [origin.strip() for origin in v.split(",")]
+        return [v]
 
 
 @lru_cache

@@ -9,6 +9,11 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# Install system dependencies for Node.js (required by Prisma)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libatomic1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
@@ -17,14 +22,14 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 # -------------------
 FROM base AS development
 
-# Install dev dependencies
+# Install dependencies including dev dependencies
 COPY pyproject.toml uv.lock* ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project
+    uv sync --frozen --no-install-project --extra dev
 
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen
+    uv sync --frozen --extra dev
 
 EXPOSE 8000
 
@@ -38,11 +43,6 @@ FROM base AS production
 # Create non-root user
 RUN groupadd --gid 1000 appgroup && \
     useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
-
-# Install system dependencies for Node.js (required by Prisma)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libatomic1 \
-    && rm -rf /var/lib/apt/lists/*
 
 # Install production dependencies only
 COPY pyproject.toml uv.lock* ./

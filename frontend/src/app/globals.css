@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* CopilotKit chat styling */
+
+/* Sidebar header (dark background) - white text */
+.copilotKitHeader,
+[class*="copilotKitHeader"] {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Assistant message content area - dark text on light background */
+/* Use :not() to avoid overriding user messages */
+.copilotKitMessages p:not(.copilotKitUserMessage *),
+.copilotKitMessages span:not(.copilotKitUserMessage *),
+.copilotKitMessages li:not(.copilotKitUserMessage *),
+.copilotKitMessages div:not(.copilotKitUserMessage):not([class*="copilotKitUserMessage"]),
+.copilotKitAssistantMessage,
+.copilotKitAssistantMessage p,
+.copilotKitAssistantMessage span,
+.copilotKitAssistantMessage li,
+.copilotKitAssistantMessage div,
+[class*="copilotKitAssistantMessage"] p,
+[class*="copilotKitAssistantMessage"] span,
+[class*="copilotKitAssistantMessage"] li,
+[class*="copilotKitAssistantMessage"] div {
+  color: #1a1a1a !important;
+}
+
+/* Headings in messages - darker for emphasis */
+.copilotKitMessages h1,
+.copilotKitMessages h2,
+.copilotKitMessages h3,
+.copilotKitMessages strong,
+.copilotKitMessages b,
+[class*="copilotKitAssistantMessage"] h1,
+[class*="copilotKitAssistantMessage"] h2,
+[class*="copilotKitAssistantMessage"] h3,
+[class*="copilotKitAssistantMessage"] strong,
+[class*="copilotKitAssistantMessage"] b {
+  color: #000000 !important;
+}
+
+/* User messages (dark background) - white text */
+.copilotKitUserMessage,
+[class*="copilotKitUserMessage"],
+[class*="copilotKitUserMessage"] p,
+[class*="copilotKitUserMessage"] span,
+[class*="copilotKitUserMessage"] div {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Tool call displays - ensure visibility */
+[class*="ToolCall"] p,
+[class*="ToolCall"] span,
+[class*="ToolCall"] div {
+  color: #333333 !important;
+}
