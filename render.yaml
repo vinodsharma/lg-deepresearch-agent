@@ -54,11 +54,11 @@ services:
     branch: main
     autoDeploy: false  # Controlled via GitHub Actions
 
-    buildCommand: docker build --build-arg NEXT_PUBLIC_API_URL=https://deep-research-agent.onrender.com -t app .
+    buildCommand: docker build --build-arg NEXT_PUBLIC_API_URL=https://deep-research-agent-gy4f.onrender.com -t app .
 
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: https://deep-research-agent.onrender.com
+        value: https://deep-research-agent-gy4f.onrender.com
       - key: NEXT_PUBLIC_COPILOTKIT_AGENT
         value: research_agent
 
