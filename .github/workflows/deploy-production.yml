@@ -94,7 +94,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            NEXT_PUBLIC_API_URL=https://deep-research-agent.onrender.com
+            NEXT_PUBLIC_API_URL=https://deep-research-agent-gy4f.onrender.com
           tags: deep-research-ui:${{ github.sha }}
 
   deploy:
